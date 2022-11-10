@@ -14,7 +14,7 @@ CORS(app, resources={r'/*': {'origins': '*'}})
 # sanity check route
 @app.route('/ping', methods=['GET'])
 def ping_pong():
-    return jsonify('pong!')
+    return jsonify('PONG!')
 
 
 if __name__ == '__main__':
