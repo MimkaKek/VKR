@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+    flask-server-api:
+        build: ./server
+        ports: 
+            - 5000:5000
+
+    vue-client-app:
+        build: ./client
+        ports: 
+            - 8080:3000
