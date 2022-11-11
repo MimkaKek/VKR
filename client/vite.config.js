@@ -5,19 +5,18 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue({
-    template: {
-      compilerOptions: {
-        compatConfig: {
-          MODE: 2
-        }
-      }
-    }
-  })],
+  server: {
+    watch: {
+      usePolling: true,
+    },
+    host: true, 
+    strictPort: true,
+    port: 3000
+  },
+  plugins: [vue()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      vue: '@vue/compat'
+      '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   }
 })

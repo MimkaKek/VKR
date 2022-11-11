@@ -6,11 +6,11 @@ services:
         ports: 
             - 8000:5000
         volumes:
-            - ./server/src:/app/src:rw
+            - ./server/src:/app/src
 
     vue-client-app:
         build: ./client
         ports: 
-            - 8001:5173
+            - 8001:3000
         volumes:
-            - ./client/src:/app/src:rw
+            - ./client/src:/app/src
