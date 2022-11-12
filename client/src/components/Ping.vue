@@ -22,7 +22,6 @@ export default {
           this.msg = res.data;
         })
         .catch((error) => {
-          // eslint-disable-next-line
           console.error(error);
         });
     },

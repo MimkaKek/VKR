@@ -1,12 +1,6 @@
 version: '3.8'
 
 services:
-    flask-server-api:
-        build: ./server
-        ports: 
-            - 8000:5000
-        volumes:
-            - ./server/src:/app/src
 
     vue-client-app:
         build: ./client
@@ -14,3 +8,45 @@ services:
             - 8001:3000
         volumes:
             - ./client/src:/app/src
+        restart: unless-stopped
+    
+    flask-server-api:
+        build: ./server
+        ports: 
+            - 8000:5000
+        volumes:
+            - ./server/src:/app/src
+        restart: unless-stopped
+        environment:
+            DB_HOST: db
+            DB_NAME: flask
+            DB_USER: flask
+            DB_PASSWORD: test
+        links:
+            - db
+        depends_on:
+            - db
+
+    db:
+        image: mysql
+        command: --default-authentication-plugin=mysql_native_password
+        volumes:
+            - mysql-data:/var/lib/mysql
+        restart: unless-stopped
+        environment:
+            MYSQL_ROOT_PASSWORD: test
+            MYSQL_DATABASE: flask
+            MYSQL_USER: flask
+            MYSQL_PASSWORD: test
+
+    adminer:
+        image: adminer
+        restart: always
+        ports:
+            - 8002:8080
+        depends_on:
+            - db
+
+volumes:
+    mysql-data:
+        driver: local
