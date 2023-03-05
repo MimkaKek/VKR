@@ -1,0 +1,1 @@
+from app.cfg.interface import ConfigInterface

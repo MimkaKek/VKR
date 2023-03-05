@@ -19,11 +19,9 @@ services:
         restart: unless-stopped
         environment:
             DB_HOST: db
-            DB_NAME: flask
-            DB_USER: flask
+            DB_USER: backend
             DB_PASSWORD: test
-        links:
-            - db
+            DB_NAME: flask_db
         depends_on:
             - db
 
@@ -34,10 +32,10 @@ services:
             - mysql-data:/var/lib/mysql
         restart: unless-stopped
         environment:
-            MYSQL_ROOT_PASSWORD: test
-            MYSQL_DATABASE: flask
-            MYSQL_USER: flask
+            MYSQL_DATABASE: flask_db
+            MYSQL_USER: backend
             MYSQL_PASSWORD: test
+            MYSQL_ROOT_PASSWORD: test
 
     adminer:
         image: adminer
