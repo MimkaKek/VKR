@@ -7,5 +7,6 @@ class SessionData(JSONSerialized):
         self.owner          = ""
         self.link           = ""
         self.permitedUsers  = []
+        self.public         = False
         self.lastUpdated    = ""
         self.created        = ""

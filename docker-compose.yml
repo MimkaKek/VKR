@@ -16,6 +16,7 @@ services:
             - 8000:5000
         volumes:
             - ./server/src:/app/src
+            - ./server/var:/var/vkr
         restart: unless-stopped
         environment:
             DB_HOST: db

@@ -1,16 +1,21 @@
 class ConfigInterface():
     
-    USER_REPOS       = {"s_repo": "sessions", "t_repo": "templates"}
-    SESSION_REPOS    = {"src": "src"}
-    TEMPLATE_REPOS   = {"src": "src"}
+    USER_REPOS        = {"p_repo": "projects", "t_repo": "templates"}
+    PROJECT_REPOS     = {"src": "src"}
     
-    USER_DATA        = "user.json"
-    SESSION_DATA     = "session.json"
-    TEMPLATE_DATA    = "template.json"
+    USER_DATA         = "user.json"
+    PROJECT_DATA      = "project.json"
     
-    BASE_PATH        = "/var/vkr"
-    GL_USERS_PATH    = BASE_PATH + "/users"
-    GL_SESSION_PATH  = BASE_PATH + "/sessions"
-    GL_TEMPLATE_PATH = BASE_PATH + "/templates"
+    BASE_PATH         = "/var/vkr"
+    GL_USERS_PATH     = BASE_PATH + "/users"
+    GL_PROJECT_PATH   = BASE_PATH + "/projects"
+    GL_TEMPLATES_PATH = BASE_PATH + "/templates"
     
-    PRESETS_PATH     = "/app/src/app/presets"
+    GL_TEMPLATES_PATH      = "/app/src/app/templates"
+
+    class Roles():
+        ADMIN   = 1 
+        TEACHER = 2
+        STUDENT = 3
+
+    ROLES = Roles()

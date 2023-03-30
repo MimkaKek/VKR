@@ -10,4 +10,7 @@ class JSONSerialized:
     
     def load(self, jsonData: str) -> None:
         self.__dict__ = json.loads(jsonData)
+
+    def dict(self) -> dict:
+        return self.__dict__
             

@@ -1,61 +1,55 @@
 from app.models import UserModel
 from app.common import Callback
 from app.common.logging import logger
-from app.managers import RepositoryManager
+from app.managers import RepositoryManager, ProjectManager
+from app.cfg import ConfigInterface as cfg
 from app import db
-from flask import request
-import sys
 
 class UserManager():
 
     def __init__(self) -> None:
         pass
     
+    def CreateAdmin(self) -> None:
+        username = "admin"
+        password = "admin"
+        self.AddUser(username, None, password)
+        self.SetRole(username, cfg.ROLES.ADMIN)
+
+        mgr = ProjectManager()
+
+        mgr.ProjectCreate(username, "DEFAULT", False, True)
 
     def _IsUsernameExist(self, username: str) -> bool:
         user = UserModel.query.filter_by(username=username).first()
-        
         if user is None:
             return False
         return True
 
     def _IsEmailExist(self, email: str) -> bool:
         user = UserModel.query.filter_by(email=email).first()
-        
         if user is None:
             return False
         return True
 
-    def AddUser(self) -> Callback:
+    def AddUser(self, username: str, email: str, password: str) -> Callback:
         
         logger.info("Call AddUser()...")
         
-        if "user" not in request.json:
-            logger.warn("'user' field doesn't exist!")
-            return Callback(status=False)
-        
-        if "mail" not in request.json["user"] or "name" not in request.json["user"] or "pass" not in request.json["user"]:
-            logger.warn("'user' field doesn't have some subfields!")
-            return Callback(status=False)
-        
-        email    = request.json["user"]["mail"]
-        username = request.json["user"]["name"]
-        password = request.json["user"]["pass"]
-        
         if self._IsEmailExist(email):
             logger.error("Email already exists...")
-            return Callback(status=False)
+            return Callback(status=1, description="Email already exists")
         
         if self._IsUsernameExist(username):
             logger.error("Username already exists...")
-            return Callback(status=False)
+            return Callback(status=2, description="Username already exists")
 
         manager = RepositoryManager()
         if not manager.RepUserCreate(username):
             logger.error("Create user repository for {name} failed".format(name=username))
-            return Callback(status=False)
+            return Callback(status=3, description="Create user repository failed")
         
-        u = UserModel(email, username, password)
+        u = UserModel(email, username, password, cfg.ROLES["STUDENT"])
         db.session.add(u)
         db.session.commit()
         
@@ -63,27 +57,24 @@ class UserManager():
 
         return Callback()
 
-    def RemoveUser(self) -> Callback:
+    def RemoveUser(self, username: str) -> Callback:
         
-        logger.info("Call RemoveUser()...")
+        logger.debug("Call RemoveUser()...")
         
-        targetUser = request.json["user"]["name"]
-        
-        if not self._IsUsernameExist(targetUser):
+        if not self._IsUsernameExist(username):
             logger.warn("Username doesn't exist")
-            return Callback(status=False)
+            return Callback(status=1, description="Username doesn't exist")
         
         manager = RepositoryManager()
-        if not manager.RepUserRemove(targetUser):
-            logger.error("Remove user repository for {name} failed".format(name=targetUser))
-            return Callback(status=False)
+        if not manager.RepUserRemove(username):
+            logger.error("Remove user repository for {name} failed".format(name=username))
+            return Callback(status=2, description="Remove user repository failed")
         
-        user = UserModel.query.filter_by(username=targetUser).one()
+        user = UserModel.query.filter_by(username=username).one()
         db.session.delete(user)
         db.session.commit()
 
-        logger.info("User removed...")
-        
+        logger.info("User {user} removed...".format(user=username))
         return Callback()
 
     def ListUsers(self) -> Callback:
@@ -93,30 +84,50 @@ class UserManager():
         users = manager.RepUsersList()
         return Callback(data=users)
 
-    def ValidateUser(self) -> Callback:
+    def ValidateUser(self, name: str, email: str, password: str) -> Callback:
         
         logger.info("Call ValidateUser()...")
         
-        if "user" not in request.json:
-            logger.error("'user' field doesn't exist")
-            return Callback(status=False)
+        callback = self.GetUser(name, email)
+        if callback.status != 0:
+            return callback
+        user = callback.data
         
-        if "name" not in request.json["user"] or "mail" not in request.json["user"] or "pass" not in request.json["user"]:
-            logger.error("'user' field doesn't have subfields")
-            return Callback(status=False)
-        
-        name     = request.json["user"]["name"]
-        email    = request.json["user"]["mail"]
-        password = request.json["user"]["pass"]
-        
-        if name == None or email == None or password == None:
-            logger.warn("Some of fields empty")
-            return Callback(status=False)
-        
-        user = UserModel.query.filter_by(email=email, username=name).first()
+        logger.info("Checking password")
+        if user.CheckPassword(password):
+            return Callback(data=user.role)
+        return Callback(status=2, description="Wrong password!")
+    
+    def GetUser(self, name: str, email: str) -> Callback:
+
+        logger.info("Call GetUser()...")
+
+        user = UserModel.query.filter_by(username=name).first()
         if user is None:
-            logger.warn("User doesn't exists!")
-            return Callback(status=False)
-        else:
-            logger.info("Checking password")
-            return Callback(status=user.CheckPassword(password))
+            logger.warn("Can't find user by username = {username}!".format(username=name))
+            user = UserModel.query.filter_by(email=email).first()
+            if user is None:
+                logger.warn("User doesn't exists!")
+                return Callback(status=1, description="User doesn't exists!")
+            
+        return Callback(data=user)
+
+    def SetRole(self, name: str, newRole: str) -> Callback:
+
+        logger.info("Call SetRole()...")
+
+        callback = self.GetUser(name, None)
+        if callback.status != 0:
+            return callback
+        user = callback.data
+
+        try:
+            user.role = newRole
+            db.session.commit()
+        except Exception as e:
+            logger.error("Error while update user role!")
+            logger.exception(e)
+            return Callback(status=1, description="Setting role failed")
+
+        logger.info("End SetRole()...")
+        return Callback()
