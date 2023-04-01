@@ -312,7 +312,7 @@ class RepositoryManager():
 
         meta = self.GetProjectMeta(pid)
         if meta == None:
-            logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+            logger.error("Failed get metadata for {pid}".format(pid=pid))
             return False
         
         meta.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
@@ -327,7 +327,7 @@ class RepositoryManager():
         if not os.path.exists(filePath):
             meta = self.GetProjectMeta(pid)
             if meta == None:
-                logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+                logger.error("Failed get metadata for {pid}".format(pid=pid))
                 return False
             
             meta.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
@@ -343,7 +343,7 @@ class RepositoryManager():
         if os.path.exists(filePath):
             meta = self.GetProjectMeta(pid)
             if meta == None:
-                logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+                logger.error("Failed get metadata for {pid}".format(pid=pid))
                 return False
         
             meta.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
