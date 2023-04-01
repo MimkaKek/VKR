@@ -4,7 +4,7 @@ from app.cfg import ConfigInterface as cfg
 from app.common.logging import logger
 from flask import jsonify, request
 
-def loginRequired(requiredRole = cfg.ROLES["STUDENT"]):
+def loginRequired(requiredRole = cfg.ROLES.STUDENT):
     def decorator(func):
         def wrapper(*args, **kwargs):
             

@@ -1,8 +1,9 @@
 import uuid
+import copy
 from app.managers import RepositoryManager
-from app.common import Callback, SessionData
+from app.common import Callback, ProjectData
 from app.common.logging import logger
-from app.models import SessionModel
+from app.models import ProjectModel
 from app import db
 
 class ProjectManager():
@@ -10,33 +11,35 @@ class ProjectManager():
     def __init__(self) -> None:
         pass
 
-    def ProjectCreate(self, username: str, repName: str, isPublic: bool = False, isTemplate: bool = False) -> Callback:
-        
-        logger.info("Call ProjectCreate()...")
+    def InitDefault(self, pid) -> bool:
+            mgr = RepositoryManager()
+            return mgr.InitDefault(pid)
+    
+    def CreateProject(self, username: str, meta: ProjectData, template: str = None) -> Callback:
+        logger.info("Call CreateProject()...")
         
         newPID   = uuid.uuid4().hex
         link     = uuid.uuid4().hex
         
-        manager = RepositoryManager()
-        userProjects = manager.ProjectsGetAll()
+        manager      = RepositoryManager()
+        userProjects = manager.GetProjects()
         
         while newPID in userProjects:
             newPID = uuid.uuid4().hex
         
-        if not manager.ProjectCreate(username, newPID, repName, isPublic=isPublic, isTemplate=isTemplate):
+        if not manager.CreateProject(username, newPID, meta, template):
             logger.error("Project {pid} for user {user} failed".format(pid=newPID, user=username))
             return Callback(status=1, description="Project create failed!")
 
-        s = SessionModel(newPID, link)
+        s = ProjectModel(newPID, link)
         db.session.add(s)
         db.session.commit()
 
         logger.info("Project {pid} for user {user} created".format(pid=newPID, user=username))
         return Callback(data=newPID)
 
-    def ProjectRemove(self, username: str, pid: str) -> Callback:
-        
-        logger.info("Call ProjectRemove()...")
+    def RemoveProject(self, username: str, pid: str) -> Callback:
+        logger.info("Call RemoveProject()...")
 
         manager = RepositoryManager()
         
@@ -44,13 +47,13 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        if not manager.ProjectRemove(username, pid):
+        if not manager.RemoveProject(username, pid):
             logger.error("Project remove failed")
             return Callback(status=2, description="Project remove failed!")
         
-        s = SessionModel.query.filter_by(sid=pid).one()
+        s = ProjectModel.query.filter_by(pid=pid).one()
         if s == None:
-            logger.error("Session {sid} doesn't exists".format(sid=pid))
+            logger.error("Session {pid} doesn't exists".format(pid=pid))
             return False
         db.session.delete(s)
         db.session.commit()
@@ -59,12 +62,11 @@ class ProjectManager():
         
         return Callback()
     
-    def ProjectGetUserList(self, username: str, isTemplate: bool = False) -> Callback:
-        
-        logger.info("Call ProjectGetUserList()...")
+    def GetUserProjects(self, username: str, isTemplate: bool = False) -> Callback:
+        logger.info("Call GetUserProjects()...")
         
         manager = RepositoryManager()
-        pDict = manager.ProjectsGetByUser(username, isTemplate)
+        pDict = manager.GetUserProjects(username, isTemplate)
         
         for pid in pDict:
             actions = {
@@ -89,24 +91,56 @@ class ProjectManager():
         
         return Callback(data=pDict)
     
-    def ProjectGet(self, username: str, pid: str) -> Callback:
-        
-        logger.info("Call ProjectGet()...")
+    def GetAllProjects(self, isAll: bool = False) -> Callback:
+        logger.info("Call GetUserProjects()...")
         
         manager = RepositoryManager()
+        pDict = manager.GetProjects(isAll)
+        
+        for pid in pDict:
+            actions = {
+                "open": {
+                    "url": "/project/" + pid,
+                    "method": "GET"
+                }
+            }
+            pDict[pid].update({"actions": actions})
+
+        if pDict == None:
+            logger.warn("Get user list failed. User doesn't exists.")
+            return Callback(status=1, description="User doesn't exists!")
+        
+        return Callback(data=pDict)
+
+    def GetProject(self, username: str, pid: str) -> Callback:
+        logger.info("Call GetProject()...")
+        
+        manager = RepositoryManager()
+        meta    = manager.GetProjectMeta(pid)
+        if meta == None:
+            logger.warn("Getting Project Metadata {pid} of user {user} failed".format(pid=pid, user=username))
+            return Callback(status=1, description="Getting metadata from project failed!")
         
         if not manager.IsUserProject(username, pid):
-            logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
-            return Callback(status=1, description="Project doesn't exists!")
+            if not meta.isPublic:
+                logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
+                return Callback(status=2, description="Project doesn't exists!")
+            
+            newPID = uuid.uuid4().hex
+            if not manager.CopyProject(username, pid, newPID):
+                logger.error("Project {pid} failed to copy!".format(pid=pid))
+                return Callback(status=3, description="Failed to create copy!")
+            
+            pid = newPID
+
+        projectFiles = manager.GetProjectFiles(pid)
+        if projectFiles == None:
+            logger.warn("Getting Project Files {pid} of user {user} failed".format(pid=pid, user=username))
+            return Callback(status=4, description="Getting files from project failed!")
         
-        metaData = manager.ProjectGetMeta(pid)
-        srcData = manager.ProjectGetFilesSrc(pid)
-        
-        if metaData == None or srcData == None:
-            logger.warn("Getting Project {pid} of user {user} failed".format(pid=pid, user=username))
-            return Callback(status=2, description="Getting data from project failed!")
-        
-        for file in srcData:
+        result = {}
+
+        for file in projectFiles:
             actions = {
                     "open": {
                         "url": "/project/" + pid + "/" + file,
@@ -121,13 +155,17 @@ class ProjectManager():
                         "method": "DELETE"
                     }
             }
-            srcData[file].update({"actions": actions})
+            result[file] = {"actions": actions}
 
-        return Callback(data={"meta": metaData.__dict__, "src": srcData})
+        return Callback(data={"meta": meta.__dict__, "files": result})
     
-    def ProjectGetFile(self, username: str, pid: str, filename: str) -> Callback:
-        
-        logger.info("Call ProjectGetFile()...")
+    def GetTemplatesWithNames(self) -> Callback:
+        mgr = RepositoryManager()
+        templates = mgr.GetTemplatesWithNames()
+        return Callback(data=templates)
+
+    def GetFileProject(self, username: str, pid: str, filename: str) -> Callback:
+        logger.info("Call GetFileProject()...")
         
         manager = RepositoryManager()
         
@@ -135,7 +173,7 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        fileData = manager.ProjectGetFile(pid, filename)
+        fileData = manager.GetProjectFile(pid, filename)
         
         if fileData == None:
             logger.warn("Getting file {filename} in Project {pid} of user {user} failed".format(filename=filename, pid=pid, user=username))
@@ -143,24 +181,22 @@ class ProjectManager():
         
         return Callback(data=fileData)
     
-    def ProjectSetFile(self, username: str, pid: str, filename: str, data: str) -> Callback:
-        
+    def SetFileProject(self, username: str, pid: str, filename: str, data: str) -> Callback:
         logger.info("Call ProjectSetFile()...")
         
         manager = RepositoryManager()
-        
         if not manager.IsUserProject(username, pid):
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        manager.ProjectSetFile(pid, filename, data)
+        manager.SetProjectFile(pid, filename, data)
         
         logger.info("File {filename} in Project {pid} of {user} updated".format(pid=pid, filename=filename, user=username))
         
         return Callback()
     
-    def ProjectRemoveFile(self, username: str, pid: str, filename: str) -> Callback:
-        logger.info("Call ProjectRemoveFile()...")
+    def RemoveProjectFile(self, username: str, pid: str, filename: str) -> Callback:
+        logger.info("Call RemoveProjectFile()...")
         
         manager = RepositoryManager()
         
@@ -168,14 +204,14 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        manager.ProjectRemoveFile(pid, filename)
+        manager.RemoveProjectFile(pid, filename)
         
         logger.info("File {filename} in project {pid} of {user} removed".format(pid=pid, filename=filename, user=username))
         
         return Callback()
     
-    def ProjectCreateFile(self, username: str, pid: str, filename: str) -> Callback:
-        logger.info("Call ProjectCreateFile()...")
+    def CreateProjectFile(self, username: str, pid: str, filename: str) -> Callback:
+        logger.info("Call CreateProjectFile()...")
         
         manager = RepositoryManager()
         
@@ -183,7 +219,7 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        manager.ProjectCreateFile(pid, filename)
+        manager.CreateProjectFile(pid, filename)
         
         logger.info("File {filename} in project {pid} of {user} updated".format(pid=pid, filename=filename, user=username))
         
@@ -207,9 +243,9 @@ class ProjectManager():
         
         return Callback(data=page)
     
-    def ProjectSetMeta(self, username: str, pid: str, data: dict) -> Callback:
+    def SetProjectMeta(self, username: str, pid: str, data: dict) -> Callback:
         
-        logger.info("Call ProjectUpdate()...")
+        logger.info("Call ProjectSetMeta()...")
         
         manager = RepositoryManager()
         
@@ -218,9 +254,11 @@ class ProjectManager():
             return Callback(status=1, description="Project doesn't exists!")
             
         try:
-            sData = SessionData()
-            sData.__dict__ = data
-            manager.ProjectSetMeta(pid, sData)
+            metaOld = manager.GetProjectMeta(pid)
+            metaNew = copy.deepcopy(metaOld)
+            metaNew.__dict__.update(data)
+            manager.SetProjectMeta(pid, metaNew)
+            manager.UpdateLinks(pid, metaOld, metaNew)
         except Exception as e:
             logger.error("Error while updating project data of {pid}".format(pid=pid))
             logger.exception(e)
@@ -230,9 +268,9 @@ class ProjectManager():
         
         return Callback()
     
-    def ProjectNewLink(self, username: str, pid: str) -> Callback:
+    def CreateLinkProject(self, username: str, pid: str) -> Callback:
         
-        logger.info("Call ProjectNewLink()...")
+        logger.info("Call CreateLinkProject()...")
         
         manager = RepositoryManager()
         
@@ -240,7 +278,7 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        newLink = manager.ProjectNewLink(pid)
+        newLink = manager.CreateLinkProject(pid)
         
         if newLink == None:
             logger.error("Error while generate share link")
@@ -250,9 +288,9 @@ class ProjectManager():
         
         return Callback(data=newLink)
     
-    def ProjectGetLink(self, username: str, pid: str) -> Callback:
+    def GetLinkProject(self, username: str, pid: str) -> Callback:
         
-        logger.info("Call ProjectGetLink()...")
+        logger.info("Call GetLinkProject()...")
         
         manager = RepositoryManager()
         
@@ -260,7 +298,7 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        newLink = manager.ProjectGetLink(pid)
+        newLink = manager.GetLinkProject(pid)
         
         if newLink == None:
             logger.error("Error while generate share link")
@@ -270,38 +308,38 @@ class ProjectManager():
         
         return Callback(data=newLink)
 
-    def ProjectUseLink(self, username: str, link: str) -> Callback:
+    def UseLinkProject(self, username: str, link: str) -> Callback:
         
         logger.info("Call ProjectUseLink()...")
         
         manager = RepositoryManager()
         
-        if not manager.ProjectUseLink(username, link):
+        if not manager.UseLinkProject(username, link):
             logger.error("Using link {link} failed".format(link=link))
             return Callback(status=1, description="Link outdated!")
         logger.info("Share link {link} used for user {user}".format(link=link, user=username))
         
         return Callback()
     
-    def ProjectCopy(self, username: str, pid: str) -> Callback:
+    def CopyProject(self, username: str, pid: str) -> Callback:
         
-        logger.info("Call ProjectCopy()...")
+        logger.info("Call CopyProject()...")
         
         manager = RepositoryManager()
         
         if not manager.IsUserProject(username, pid):
-            logger.error("Project {sid} of user {user} doesn't exist".format(sid=pid, user=username))
+            logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
         newPID = uuid.uuid4().hex
         
-        allProjects = manager.ProjectsGetAll()
+        allProjects = manager.GetProjects(isAll=True)
         
         while newPID in allProjects:
             newPID = uuid.uuid4().hex
         
-        if not manager.ProjectCopy(username, pid, newPID):
-            logger.error("Copy project {sid} of user {user} failed".format(sid=pid, user=username))
+        if not manager.CopyProject(username, pid, newPID):
+            logger.error("Copy project {pid} of user {user} failed".format(pid=pid, user=username))
             return Callback(status=2, description="Copy failed")
         
         return Callback()

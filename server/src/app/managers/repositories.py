@@ -8,8 +8,8 @@ import re
 
 from app import db
 from app.cfg import ConfigInterface
-from app.models import SessionModel
-from app.common import UserData, SessionData
+from app.models import ProjectModel
+from app.common import UserData, ProjectData
 from app.common.logging import logger
 
 class RepositoryManager():
@@ -41,23 +41,12 @@ class RepositoryManager():
         return True
     
     def Init(self) -> None:
-        
         if not os.path.exists(ConfigInterface.GL_PROJECT_PATH):
             os.makedirs(ConfigInterface.GL_PROJECT_PATH)
-            
         if not os.path.exists(ConfigInterface.GL_USERS_PATH):
             os.makedirs(ConfigInterface.GL_USERS_PATH)
-
-    def GetTemplates(self) -> dict[str, str]:
-
-        templates = os.listdir(ConfigInterface.GL_TEMPLATES_PATH)
-        tDict = {}
-
-        for template in templates:
-            meta = self.ProjectGetMeta(template)
-            tDict[template] = meta.name
-
-        return tDict
+        if not os.path.exists(ConfigInterface.GL_PUBLIC_PATH):
+            os.makedirs(ConfigInterface.GL_PUBLIC_PATH)
     
     def InitDefault(self, pid) -> bool:
         projectPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"])
@@ -73,12 +62,9 @@ class RepositoryManager():
         
         os.makedirs(usrPath)
         
-        for dir in ConfigInterface.USER_REPOS:
-            contentPath = os.path.join(usrPath, ConfigInterface.USER_REPOS[dir])
-            if dir == "t_repo":
-                os.symlink(ConfigInterface.GL_TEMPLATES_PATH, contentPath)
-            else:
-                os.makedirs(contentPath)
+        for key, value in ConfigInterface.USER_REPOS:
+            repoPath = os.path.join(usrPath, value)
+            os.makedirs(repoPath)
         
         usrDataPath = os.path.join(usrPath, ConfigInterface.USER_DATA)
         usrData     = UserData()
@@ -100,18 +86,27 @@ class RepositoryManager():
             logger.error("User already removed")
             return False
         
-        sList = os.listdir(os.path.join(usrPath, ConfigInterface.USER_REPOS["p_repo"]))
-        sData = SessionData()
+        pList = os.listdir(os.path.join(usrPath, ConfigInterface.USER_REPOS["p_repo"]))
+        tList = os.listdir(os.path.join(usrPath, ConfigInterface.USER_REPOS["t_repo"]))
         
-        for sid in sList:
-            sDataFile = os.path.join(usrPath, ConfigInterface.USER_REPOS["p_repo"], sid, ConfigInterface.PROJECT_DATA)
-            with open(sDataFile, "r") as file:
-                sData.load(file.read())
-                
-            if sData.owner == username:
-                self.ProjectRemove(username, sid)
+        for pid in pList:
+            meta = self.GetProjectMeta(pid)
+            if meta == None:
+                logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+                return False
+            
+            if meta.owner == username:
+                self.RemoveProject(username, pid)
 
-        os.unlink(usrPath, ConfigInterface.USER_REPOS["t_repo"])
+        for pid in tList:
+            meta = self.GetProjectMeta(pid)
+            if meta == None:
+                logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+                return False
+            
+            if meta.owner == username:
+                self.RemoveProject(username, pid)
+
         shutil.rmtree(usrPath)
         
         return True
@@ -122,61 +117,61 @@ class RepositoryManager():
     
     def RepUsersList(self) -> list:
         return os.listdir(ConfigInterface.GL_USERS_PATH)
-        
+
     #======================================= PROJECT ===============================================
     
-    def ProjectCreate(self, username: str, sid: str, repName: str, template: str = "DEFAULT", isPublic: bool = False, isTemplate: bool = False) -> bool:
+    def CreateProject(self, username: str, pid: str, pData: ProjectData = ProjectData(), templateID: str = None, copy: bool = False) -> bool:
         
-        logger.info("Call CreateSessionRep()...")
-        
-        link = uuid.uuid4().hex
-        s = SessionModel(sid, link)
-        db.session.add(s)
-        db.session.commit()
-        
+        logger.info("Call CreateProject()...")
+
+        # Set Links
+
+        repo    = "t_repo" if pData.isTemplate else "p_repo"
         usrPath = os.path.join(ConfigInterface.GL_USERS_PATH, username)
-        glSessionPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid)
 
-        repo = "p_repo" if not isTemplate else "t_repo"
+        glProjectPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
+        lProjectPath  = os.path.join(usrPath, ConfigInterface.USER_REPOS[repo], pid)
 
-        lSessionPath  = os.path.join(usrPath, ConfigInterface.USER_REPOS[repo], sid)
-        
-        os.makedirs(glSessionPath)
-        os.symlink(glSessionPath, lSessionPath)
-        
-        logger.info("Symlink for {sid} of {user} from {link} created".format(sid=sid, user=username, link=lSessionPath))
+        os.makedirs(glProjectPath)
+        os.symlink(glProjectPath, lProjectPath)
 
-        sData             = SessionData()
-        sData.owner       = username
-        sData.name        = repName
-        sData.public      = isPublic
-        sData.created     = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
-        sData.lastUpdated = sData.created
+        if pData.isTemplate:
+            os.symlink(glProjectPath, os.path.join(ConfigInterface.GL_TEMPLATES_PATH, pid))
+
+        if pData.isPublic:
+            os.symlink(glProjectPath, os.path.join(ConfigInterface.GL_PUBLIC_PATH, pid))
         
-        self.ProjectSetMeta(sid, sData)
+        logger.info("Symlink for {pid} of {user} from {link} created".format(pid=pid, user=username, link=lProjectPath))
+
+        # Set MetaData
         
-        if template == None:
+        self.SetProjectMeta(pid, pData)
+        
+        # Use template
+
+        if templateID == None:
             logger.info("Repository created")
             return True
-            
-        templates = self.GetTemplates()
-        projects  = self.ProjectsGetByUser(username)
         
-        if template not in templates and template not in projects:
-            if repName == "DEFAULT":
-                return self.InitDefault(sid)
-            
-            logger.error("Template {path} doesn't exists".format(path=template))
-            os.unlink(lSessionPath)
-            shutil.rmtree(glSessionPath)
-            return False
-        
-        if template in projects:
-            templateSrcPath = os.path.join(usrPath, ConfigInterface.USER_REPOS["p_repo"], template, ConfigInterface.PROJECT_REPOS["src"])
-        else:
-            templateSrcPath = os.path.join(ConfigInterface.GL_TEMPLATES_PATH, template, ConfigInterface.PROJECT_REPOS["src"])
+        templateSrcPath = None
 
-        lSessionSrcPath = os.path.join(lSessionPath, ConfigInterface.PROJECT_REPOS["src"])
+        if not os.path.exists(os.path.join(ConfigInterface.GL_TEMPLATES_PATH, templateID)):
+            if not copy or not os.path.exists(os.path.join(ConfigInterface.GL_PROJECT_PATH, templateID)):
+                logger.error("Template {path} doesn't exists. Rollback changes".format(path=templateID))
+                s = ProjectModel.query.filter_by(pid=pid).one()
+                if s == None:
+                    logger.error("Project {pid} doesn't exists".format(pid=pid))
+                    return False
+                db.session.delete(s)
+                db.session.commit()
+                os.unlink(lProjectPath)
+                shutil.rmtree(glProjectPath)
+                return False
+            templateSrcPath = os.path.join(os.path.join(ConfigInterface.GL_PROJECT_PATH, templateID, ConfigInterface.PROJECT_REPOS["src"]))
+        else:
+            templateSrcPath = os.path.join(ConfigInterface.GL_TEMPLATES_PATH, templateID, ConfigInterface.PROJECT_REPOS["src"])
+
+        lSessionSrcPath = os.path.join(lProjectPath, ConfigInterface.PROJECT_REPOS["src"])
 
         self.RepositoryCopy(lSessionSrcPath, templateSrcPath)
 
@@ -184,200 +179,239 @@ class RepositoryManager():
         
         return True
         
-    def ProjectRemove(self, username: str, sid: str) -> bool:
+    def RemoveProject(self, username: str, pid: str) -> bool:
         
-        logger.info("Call RemoveSessionRep()...")
+        logger.info("Call RemoveProject()...")
         
-        s = SessionModel.query.filter_by(sid=sid).one()
-        if s == None:
-            logger.error("Session {sid} doesn't exists".format(sid=sid))
-            return False
-        
-        db.session.delete(s)
-        db.session.commit()
-        
+        # Unlink
         usrPath       = os.path.join(ConfigInterface.GL_USERS_PATH, username)
-        glSessionPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid)
-        lSessionPath  = os.path.join(usrPath, ConfigInterface.USER_REPOS["p_repo"], sid)
-        
-        sDataFile = os.path.join(lSessionPath, ConfigInterface.PROJECT_DATA)
-        
-        data = SessionData()
-        
-        with open(sDataFile, "r") as file:
-            data.load(file.read())
-        
-        for user in data.permitedUsers:
-            pUsrPath = os.path.join(ConfigInterface.GL_USERS_PATH, user, ConfigInterface.USER_REPOS["p_repo"], sid)
-            os.unlink(pUsrPath)
-            
-        os.unlink(lSessionPath)
-        shutil.rmtree(glSessionPath)
-        logger.info("Session {sid} of {user} removed".format(sid=sid, user=username))
-        return True
-    
-    def ProjectCopy(self, username: str, sid: str, newSID: str) -> bool:
-        logger.info("Call CopySession()...")
-        
-        sData = self.ProjectGetMeta(sid)
-        sData.name += " (copy)"
-        
-        if not self.ProjectCreate(username, newSID, sData.name, sid):
+        glProjectPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
+        lProjectPath  = os.path.join(usrPath, ConfigInterface.USER_REPOS["p_repo"], pid)
+
+        meta = self.GetProjectMeta(pid)
+        if meta == None:
+            logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
             return False
         
-        logger.info("Session {sid} copied to {newsid} for user {user}".format(sid=sid, newsid=newSID, user=username))
+        for user in meta.permitedUsers:
+            os.unlink(os.path.join(ConfigInterface.GL_USERS_PATH, user, ConfigInterface.USER_REPOS["p_repo"], pid))
+
+        if meta.isTemplate:
+            os.unlink(os.path.join(ConfigInterface.GL_TEMPLATES_PATH, pid))
+
+        if meta.isPublic:
+            os.unlink(os.path.join(ConfigInterface.GL_PUBLIC_PATH, pid))
+            
+        os.unlink(lProjectPath)
+
+        # Remove
+        shutil.rmtree(glProjectPath)
+
+        logger.info("Project {pid} of {user} removed".format(pid=pid, user=username))
         return True
-        
     
-    def ProjectsGetAll(self) -> dict:
+    def CopyProject(self, username: str, pid: str, newpid: str) -> bool:
+        logger.info("Call CopyProject()...")
+        
+        meta = self.GetProjectMeta(pid)
+        if meta == None:
+            logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+            return False
+        
+        meta.name          += " (copy)"
+        meta.permitedUsers  = []
+        meta.created        = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
+        meta.lastUpdated    = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
+        
+        copy = True
+
+        if not self.CreateProject(username, newpid, meta, pid, copy):
+            return False
+        
+        logger.info("Project {pid} copied to {newpid} for user {user}".format(pid=pid, newpid=newpid, user=username))
+        return True
+    
+    def GetProjects(self, isAll: bool = False) -> dict[str, dict]:
         logger.info("Call ProjectsGetAll()...")
 
         result = {}
-        
-        sessions = os.listdir(ConfigInterface.GL_PROJECT_PATH)
-        for sid in sessions:
-            sData = self.ProjectGetMeta(sid)
-            result.update({sid: {"name": sData.name, "owner": sData.owner, "created": sData.created}})
-        
-        logger.info("List of all sessions getted")
-        
-        return result
-    
-    def ProjectsGetByUser(self, username: str, isTemplate: bool = False) -> dict[str, dict]:
-        logger.info("Call ProjectsGetByUser()...")
+        pPath  = ConfigInterface.GL_PROJECT_PATH if isAll else ConfigInterface.GL_PUBLIC_PATH
 
-        result = {}
-        
-        repo = "p_repo" if not isTemplate else "t_repo"
-
-        sPath = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo])
-        
-        projects = os.listdir(sPath)
-        for sid in projects:
-            sData = self.ProjectGetMeta(sid)
-            result.update({sid: {"name": sData.name, "created": sData.created, "last_updated": sData.lastUpdated, "owner": sData.owner}})
+        sessions = os.listdir(pPath)
+        for pid in sessions:
+            meta = self.GetProjectMeta(pid)
+            if meta == None:
+                logger.error("Failed get metadata for {pid}".format(pid=pid))
+                return result
+            result[pid] = {"name": meta.name, "owner": meta.owner, "created": meta.created}
         
         logger.info("List of all projects getted")
+        return result
+    
+    def GetUserProjects(self, username: str, isTemplate: bool = False) -> dict[str, dict]:
+        logger.info("Call GetUserProjects()...")
+
+        result = {}
+        repo   = "t_repo" if isTemplate else "p_repo"
+        sPath  = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo])
+        
+        projects = os.listdir(sPath)
+        for pid in projects:
+            meta = self.GetProjectMeta(pid)
+            if meta == None:
+                logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+                return result
+            result.update({pid: {"name": meta.name, "created": meta.created, "last_updated": meta.lastUpdated, "owner": meta.owner}})
+        
+        logger.info("List of user projects getted")
         
         return result
-    
-    def IsUserProject(self, username: str, sid: str) -> bool:
+
+    def IsUserProject(self, username: str, pid: str, isTemplate: bool = False) -> bool:
         logger.info("Call IsUserProject()...")
-        sPath = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS["p_repo"])
-        sessions = os.listdir(sPath)        
-        return sid in sessions
+        repo     = "t_repo" if isTemplate else "p_repo"
+        sPath    = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo])
+        projects = os.listdir(sPath)        
+        return pid in projects
     
+    def GetTemplates(self) -> list[str]:
+        return os.listdir(ConfigInterface.GL_TEMPLATES_PATH)
+    
+    def GetTemplatesWithNames(self) -> dict[str, str]:
+        result = {}
+        templatesID = self.GetTemplates()
+        for pid in templatesID:
+            meta = self.GetProjectMeta(pid)
+            result[pid] = meta.name
+        return result
+
     #======================================= FILES ===============================================
 
-    def ProjectGetFilesSrc(self, sid: str) -> dict[str, dict]:
-        logger.info("Call GetSessionSrc()...")
-        result = {}
-        srcPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid, ConfigInterface.PROJECT_REPOS["src"])
-        for filename in os.listdir(srcPath):
-            filePath = os.path.join(srcPath, filename)
-            if os.path.isfile(filePath):
-                with open(filePath, "r") as file:
-                    result[filename] = {"src": file.read()}
-                    
-        logger.info("Src of session {sid} getted".format(sid=sid))
-                    
-        return result
+    def GetProjectFiles(self, pid: str) -> list[str]:
+        logger.info("Call GetProjectFiles()...")
+        srcPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"])
+        return os.listdir(srcPath)
     
-    def ProjectGetFile(self, sid: str, filename: str) -> (str | None):
-        logger.info("Call ProjectGetFile()...")
+    def GetProjectFile(self, pid: str, filename: str) -> str | None:
+        logger.info("Call GetProjectFile()...")
         result = None
-        filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid, ConfigInterface.PROJECT_REPOS["src"], filename)
+        filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
         
         if os.path.isfile(filePath):
             with open(filePath, "r") as file:
                 result = file.read()
                     
-        logger.info("File {filename} of session {sid} getted".format(filename=filename, sid=sid)) 
+        logger.info("File {filename} of project {pid} getted".format(filename=filename, pid=pid)) 
         return result
     
-    def ProjectSetFile(self, sid: str, filename: str, data: str) -> bool:
-        logger.info("Call ProjectSetFile()...")
-        filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid, ConfigInterface.PROJECT_REPOS["src"], filename)
+    def SetProjectFile(self, pid: str, filename: str, data: str) -> bool:
+        logger.info("Call SetProjectFile()...")
+        filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
         with open(filePath, "w") as file:
             file.write(data)
 
-        meta = self.ProjectGetMeta(sid)
-        meta.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
-        self.ProjectSetMeta(sid, meta)
+        meta = self.GetProjectMeta(pid)
+        if meta == None:
+            logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+            return False
         
-        logger.info("File {filename} of session {sid} updated".format(filename=filename, sid=sid))
+        meta.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
+        self.SetProjectMeta(pid, meta)
+        
+        logger.info("File {filename} of project {pid} updated".format(filename=filename, pid=pid))
         return True
     
-    def ProjectRemoveFile(self, sid: str, filename: str) -> bool:
-        logger.info("Call ProjectRemoveFile()...")
-        filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid, ConfigInterface.PROJECT_REPOS["src"], filename)
-        if os.path.exists(filePath):
-            meta = self.ProjectGetMeta(sid)
-            meta.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
-            self.ProjectSetMeta(sid, meta)
-            os.remove(filePath)
-        logger.info("File {filename} of session {sid} removed".format(filename=filename, sid=sid))
-        return True
-    
-    def ProjectCreateFile(self, sid: str, filename: str) -> bool:
-        logger.info("Call ProjectCreateFile()...")
-        filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid, ConfigInterface.PROJECT_REPOS["src"], filename)
+    def CreateProjectFile(self, pid: str, filename: str) -> bool:
+        logger.info("Call CreateProjectFile()...")
+        filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
         if not os.path.exists(filePath):
-            meta = self.ProjectGetMeta(sid)
+            meta = self.GetProjectMeta(pid)
+            if meta == None:
+                logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+                return False
+            
             meta.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
-            self.ProjectSetMeta(sid, meta)
+            self.SetProjectMeta(pid, meta)
             with open(filePath, "w") as f:
                 pass
-        logger.info("File {filename} of session {sid} created".format(filename=filename, sid=sid))
+        logger.info("File {filename} of project {pid} created".format(filename=filename, pid=pid))
+        return True
+    
+    def RemoveProjectFile(self, pid: str, filename: str) -> bool:
+        logger.info("Call RemoveProjectFile()...")
+        filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
+        if os.path.exists(filePath):
+            meta = self.GetProjectMeta(pid)
+            if meta == None:
+                logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+                return False
+        
+            meta.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
+            self.SetProjectMeta(pid, meta)
+            os.remove(filePath)
+        logger.info("File {filename} of project {pid} removed".format(filename=filename, pid=pid))
+        return True
+    
+    def UpdateLinks(self, pid: str, metaOld: ProjectData, metaNew: ProjectData) -> bool:
+        
+        projectPath  = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
+        publicPath   = os.path.join(ConfigInterface.GL_PUBLIC_PATH, pid)
+        templatePath = os.path.join(ConfigInterface.GL_TEMPLATES_PATH, pid)
+
+        try:
+            if metaOld.isPublic != metaNew.isPublic:
+                if metaOld.isPublic:
+                    os.unlink(publicPath)
+                else:
+                    os.symlink(projectPath, publicPath)
+
+            if metaOld.isTemplate != metaNew.isTemplate:
+                if metaOld.isTemplate:
+                    os.unlink(templatePath)
+                else:
+                    os.symlink(projectPath, templatePath)
+        except Exception as e:
+            logger.error("Update links failed for project {pid}".format(pid=pid))
+            logger.exception(e)
+            return False
+        
         return True
     
     #======================================= METADATA ===============================================
 
-    def ProjectSetMeta(self, sid: str, sData: dict | SessionData) -> bool:
+    def SetProjectMeta(self, pid: str, sData: ProjectData) -> bool:
+        logger.info("Call SetProjectMeta()...")
         
-        logger.info("Call SetSessionData()...")
-        
-        sDataPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid, ConfigInterface.PROJECT_DATA)
-        metadata = SessionData()
-
-        if os.path.exists(sDataPath):
-            with open(sDataPath, "r") as file:
-                metadata.load(file.read())
-
-        metadata.__dict__.update(sData.__dict__)
-        metadata.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
-
+        sDataPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_DATA)
         with open(sDataPath, "w") as file:
-            file.write(metadata.dump())
+            file.write(sData.dump())
             
-        logger.info("Session data for {sid} updated".format(sid=sid))
-            
+        logger.info("Session data for {pid} updated".format(pid=pid))
         return True
     
-    def ProjectGetMeta(self, sid: str) -> SessionData:
-        logger.info("Call GetSessionData()... global")
+    def GetProjectMeta(self, pid: str) -> ProjectData | None:
+        logger.info("Call GetProjectMeta()...")
         
-        result   = SessionData()
-        dataPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid, ConfigInterface.PROJECT_DATA)
-        
+        result   = None
+        dataPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_DATA)
         if os.path.exists(dataPath):
             with open(dataPath, "r") as file:
+                result = ProjectData()
                 result.load(file.read())
         
-        logger.info("Session data get")
-        
+        logger.info("Project data get from {pid}".format(pid=pid))
         return result
     
     #======================================= PREVIEW ===============================================
 
-    def ProjectGetPage(self, sid: str, filename: str) -> str:
+    def ProjectGetPage(self, pid: str, filename: str) -> str:
         
         logger.info("Call ProjectGetPage()...")
-        repPath  = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid, ConfigInterface.PROJECT_REPOS["src"])
+        repPath  = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"])
         tempPath = os.path.join(repPath, filename)
 
         if not os.path.exists(tempPath):
-            logger.error("File {filename} in {sid} doesn't exists".format(sid=sid, filename=filename))
+            logger.error("File {filename} in {pid} doesn't exists".format(pid=pid, filename=filename))
             return ""
 
         html = ""
@@ -409,49 +443,53 @@ class RepositoryManager():
     
     #======================================= SHARE ===============================================
 
-    def ProjectShare(self, sid: str) -> str:
+    def CreateLinkProject(self, pid: str) -> str:
+        logger.info("Call CreateLinkProject()...")
         
-        logger.info("Call ShareSession()...")
-        
-        sData = self.ProjectGetMeta(sid)
-        sData.link = uuid.uuid4().hex
-        
-        session = SessionModel.query.filter_by(sid=sid).first()
-        if session == None:
-            logger.error("Session doesn't exists")
+        newLink = uuid.uuid4().hex
+
+        project = ProjectModel.query.filter_by(pid=pid).first()
+        if project == None:
+            logger.error("Project doesn't exists")
             return None
-        
-        session.reflink = sData.link
+        project.reflink = newLink
         db.session.commit()
         
-        if not self.ProjectSetMeta(sid, sData):
-            logger.error("Creation of new share link failed")
-            return None
-
-        logger.info("New share link {link}".format(link=sData.link))
-        return sData.link
+        logger.info("New share link {link}".format(link=newLink))
+        return newLink
     
-    def ProjectUseShareLink(self, username: str, link: str) -> bool:
+    def GetLinkProject(self, pid: str) -> str:
+        project = ProjectModel.query.filter_by(pid=pid).first()
+        if project == None:
+            logger.error("Project doesn't exists")
+            return None
+        return project.reflink
+
+    def UseLinkProject(self, username: str, link: str) -> bool:
         
-        logger.info("Call UseSessionShareLink()...")
+        logger.info("Call UseLinkProject()...")
         
-        session = SessionModel.query.filter_by(reflink=link).first()
-        if session == None:
+        project = ProjectModel.query.filter_by(reflink=link).first()
+        if project == None:
             logger.warn("Link is outdated")
             return False
         
-        sid = session.sid
+        pid  = project.pid
+        meta = self.GetProjectMeta(pid)
+        if meta == None:
+            logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
+            return False
         
-        glSessionPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, sid)
-        lSessionPath = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS["p_repo"], sid)
+        repo = "t_repo" if meta.isTemplate else "p_repo"
+
+        glSessionPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
+        lSessionPath  = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo], pid)
         
         os.symlink(glSessionPath, lSessionPath)
         
-        sData = self.ProjectGetMeta(sid)
-        sData.permitedUsers.append(username)
+        meta.permitedUsers.append(username)
+        self.SetProjectMeta(pid, meta)
         
-        self.ProjectSetMeta(sid, sData)
-        
-        logger.info("User {user} added to permitted users in session {sid}".format(user=username, sid=sid))
+        logger.info("User {user} added to permitted users in project {pid}".format(user=username, pid=pid))
         
         return True

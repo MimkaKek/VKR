@@ -10,17 +10,17 @@ def create_app(config_class = Config):
 
     db.init_app(app)
 
-    from app.models import SessionModel, UserModel
+    from app.models import ProjectModel, UserModel
 
     with app.app_context():
         db.create_all()
         
-    from app.managers import RepositoryManager, UserManager
-    repManager = RepositoryManager()
-    repManager.Init()
+        from app.managers import RepositoryManager, UserManager
+        repManager = RepositoryManager()
+        repManager.Init()
 
-    usrManager = UserManager()
-    usrManager.CreateAdmin()
+        usrManager = UserManager()
+        usrManager.CreateAdmin()
 
     from app.routes import projectBlueprint
     app.register_blueprint(projectBlueprint)

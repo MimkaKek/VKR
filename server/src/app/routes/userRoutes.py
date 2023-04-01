@@ -47,7 +47,7 @@ def register():
     return jsonify(callback.dict())
 
 @userBlueprint.route('/user', methods=['PATCH'])
-@loginRequired(cfg.ROLES["ADMIN"])
+@loginRequired(cfg.ROLES.ADMIN)
 def setUserRole():
     logger.debug("Update user: begin")
     

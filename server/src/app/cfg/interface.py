@@ -10,8 +10,9 @@ class ConfigInterface():
     GL_USERS_PATH     = BASE_PATH + "/users"
     GL_PROJECT_PATH   = BASE_PATH + "/projects"
     GL_TEMPLATES_PATH = BASE_PATH + "/templates"
+    GL_PUBLIC_PATH    = BASE_PATH + "/public"
     
-    GL_TEMPLATES_PATH      = "/app/src/app/templates"
+    PRESETS_PATH      = "/app/src/app/templates"
 
     class Roles():
         ADMIN   = 1 

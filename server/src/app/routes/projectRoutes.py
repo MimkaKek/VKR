@@ -7,48 +7,55 @@ from app.cfg import ConfigInterface as cfg
 
 projectBlueprint = Blueprint('project_blueprint', __name__)
 
-@projectBlueprint.route('/templates', methods=['GET'])
-@loginRequired(cfg.ROLES.TEACHER)
-def templateList():
-    username = request.json["user"]["name"]
+@projectBlueprint.route('/templates_all', methods=['GET'])
+@loginRequired(cfg.ROLES.STUDENT)
+def templatesAllList():
     pManager = ProjectManager()
-    callback = pManager.ProjectGetUserList(username, isTemplate=True)
+    callback = pManager.GetTemplatesWithNames()
     return jsonify(callback.dict())
 
-@projectBlueprint.route('/templates', methods=['PUT'])
-@loginRequired(cfg.ROLES.TEACHER)
-def templateCreate():
-    
+@projectBlueprint.route('/templates', methods=['GET'])
+@loginRequired(cfg.ROLES.STUDENT)
+def templatesList():
     username = request.json["user"]["name"]
-    if "data" not in request.json:
-        logger.warn("'data' field needed")
-        return jsonify(Callback(status=1, description="'data' field required").dict())
-    repName  = request.json["data"]
-    
     pManager = ProjectManager()
-    callback = pManager.ProjectCreate(username, repName)
+    callback = pManager.GetUserProjects(username, isTemplate=True)
+    return jsonify(callback.dict())
+
+@projectBlueprint.route('/public_projects', methods=['GET'])
+@loginRequired(cfg.ROLES.STUDENT)
+def publicProjects():
+    pManager = ProjectManager()
+    callback = pManager.GetAllProjects()
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/projects', methods=['GET'])
 @loginRequired(cfg.ROLES.STUDENT)
-def projectList():
+def projectsList():
     username = request.json["user"]["name"]
     pManager = ProjectManager()
-    callback = pManager.ProjectGetUserList(username)
+    callback = pManager.GetUserProjects(username)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/projects', methods=['PUT'])
 @loginRequired(cfg.ROLES.STUDENT)
-def projectCreate():
-    
+def projectsCreate():
     username = request.json["user"]["name"]
     if "data" not in request.json:
         logger.warn("'data' field needed")
         return jsonify(Callback(status=1, description="'data' field required").dict())
-    repName  = request.json["data"]
+    if "meta" not in request.json["data"]:
+        logger.warn("'meta' field needed")
+        return jsonify(Callback(status=1, description="'meta' field required").dict())
+    
+    meta       = request.json["data"]["meta"]
+    templateID = None
+    
+    if "tid" in request.json["data"]:
+        templateID = request.json["data"]["tid"]
     
     pManager = ProjectManager()
-    callback = pManager.ProjectCreate(username, repName)
+    callback = pManager.CreateProject(username, meta, templateID)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>', methods=['GET'])
@@ -56,7 +63,7 @@ def projectCreate():
 def projectGet(hash):
     username = request.json["user"]["name"]
     pManager = ProjectManager()
-    callback = pManager.ProjectGet(username, hash)
+    callback = pManager.GetProject(username, hash)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>', methods=['PATCH'])
@@ -68,7 +75,7 @@ def projectUpdate(hash):
         return jsonify(Callback(status=1, description="'data' field required").dict())
     data     = request.json["data"]
     pManager = ProjectManager()
-    callback = pManager.ProjectSetMeta(username, hash, data)
+    callback = pManager.SetProjectMeta(username, hash, data)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>', methods=['DELETE'])
@@ -76,7 +83,7 @@ def projectUpdate(hash):
 def projectRemove(hash):
     username = request.json["user"]["name"]
     pManager = ProjectManager()
-    callback = pManager.ProjectRemove(username, hash)
+    callback = pManager.RemoveProject(username, hash)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>', methods=['POST'])
@@ -84,7 +91,7 @@ def projectRemove(hash):
 def projectCopy(hash):
     username = request.json["user"]["name"]
     pManager = ProjectManager()
-    callback = pManager.ProjectCopy(username, hash)
+    callback = pManager.CopyProject(username, hash)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['GET'])
@@ -92,7 +99,7 @@ def projectCopy(hash):
 def projectFileGet(hash, filename):
     username = request.json["user"]["name"]
     pManager = ProjectManager()
-    callback = pManager.ProjectGetFile(username, hash, filename)
+    callback = pManager.GetFileProject(username, hash, filename)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['PATCH'])
@@ -106,7 +113,7 @@ def projectFileSet(hash, filename):
     data     = request.json["data"]
     
     pManager = ProjectManager()
-    callback = pManager.ProjectSetFile(username, hash, filename, data)
+    callback = pManager.SetFileProject(username, hash, filename, data)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['DELETE'])
@@ -114,7 +121,7 @@ def projectFileSet(hash, filename):
 def projectFileDelete(hash, filename):
     username = request.json["user"]["name"]
     pManager = ProjectManager()
-    callback = pManager.ProjectRemoveFile(username, hash, filename)
+    callback = pManager.RemoveProjectFile(username, hash, filename)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['PUT'])
@@ -122,7 +129,7 @@ def projectFileDelete(hash, filename):
 def projectFileCreate(hash, filename):
     username = request.json["user"]["name"]
     pManager = ProjectManager()
-    callback = pManager.ProjectCreateFile(username, hash, filename)
+    callback = pManager.CreateProjectFile(username, hash, filename)
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>/preview', methods=['GET'])

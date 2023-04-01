@@ -1,11 +1,11 @@
 from app import db
 
-class SessionModel(db.Model):
+class ProjectModel(db.Model):
 
     id      = db.Column(db.Integer,     primary_key=True)
-    sid     = db.Column(db.String(128), unique=True)
+    pid     = db.Column(db.String(128), unique=True)
     reflink = db.Column(db.String(128), unique=True)
 
-    def __init__(self, sid: str, reflink: str) -> None:
-        self.sid     = sid
+    def __init__(self, pid: str, reflink: str) -> None:
+        self.pid     = pid
         self.reflink = reflink

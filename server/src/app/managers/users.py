@@ -1,5 +1,5 @@
 from app.models import UserModel
-from app.common import Callback
+from app.common import Callback, ProjectData
 from app.common.logging import logger
 from app.managers import RepositoryManager, ProjectManager
 from app.cfg import ConfigInterface as cfg
@@ -11,14 +11,20 @@ class UserManager():
         pass
     
     def CreateAdmin(self) -> None:
+
         username = "admin"
         password = "admin"
+
+        if self._IsUsernameExist(username):
+            return
+        
         self.AddUser(username, None, password)
         self.SetRole(username, cfg.ROLES.ADMIN)
 
         mgr = ProjectManager()
-
-        mgr.ProjectCreate(username, "DEFAULT", False, True)
+        meta = ProjectData("DEFAULT", "Default template", username, isTemplate=True)
+        callback = mgr.CreateProject(username, meta)
+        mgr.InitDefault(callback.data)
 
     def _IsUsernameExist(self, username: str) -> bool:
         user = UserModel.query.filter_by(username=username).first()
