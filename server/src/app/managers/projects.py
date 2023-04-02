@@ -28,7 +28,7 @@ class ProjectManager():
             newPID = uuid.uuid4().hex
         
         if not manager.CreateProject(username, newPID, meta, template):
-            logger.error("Project {pid} for user {user} failed".format(pid=newPID, user=username))
+            logger.error("Project creation with pid {pid} for user {user} failed".format(pid=newPID, user=username))
             return Callback(status=1, description="Project create failed!")
 
         s = ProjectModel(newPID, link)
@@ -47,9 +47,15 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
+        meta = manager.GetProjectMeta(pid)
+
+        if meta.owner != username:
+            logger.warn("User {name} tried to remove project {pid} of user {owner}! Rejected!".format(name=username, pid=pid, owner=meta.owner))
+            return Callback(status=2, description="The project doesn't belong to you!")
+
         if not manager.RemoveProject(username, pid):
-            logger.error("Project remove failed")
-            return Callback(status=2, description="Project remove failed!")
+            logger.error("Project with pid {pid} remove failed!".format(pid=pid))
+            return Callback(status=3, description="Project remove failed!")
         
         s = ProjectModel.query.filter_by(pid=pid).one()
         if s == None:
@@ -252,7 +258,7 @@ class ProjectManager():
         if not manager.IsUserProject(username, pid):
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
-            
+        
         try:
             metaOld = manager.GetProjectMeta(pid)
             metaNew = copy.deepcopy(metaOld)
@@ -278,13 +284,19 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        newLink = manager.CreateLinkProject(pid)
+        newLink = uuid.uuid4().hex
+        project = ProjectModel.query.filter_by(pid=pid).first()
+        if project == None:
+            logger.error("Project doesn't exists")
+            return None
+        project.reflink = newLink
+        db.session.commit()
         
         if newLink == None:
             logger.error("Error while generate share link")
             return Callback(status=2, description="Error while generate share link")
         
-        logger.info("New share link for {pid} of {user} created".format(pid=pid, user=username))
+        logger.info("New share link {link} for {pid} of {user} created".format(link=newLink, pid=pid, user=username))
         
         return Callback(data=newLink)
     
@@ -298,15 +310,19 @@ class ProjectManager():
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         
-        newLink = manager.GetLinkProject(pid)
+        project = ProjectModel.query.filter_by(pid=pid).first()
+        if project == None:
+            logger.error("Project doesn't exists")
+            return None
         
-        if newLink == None:
-            logger.error("Error while generate share link")
-            return Callback(status=2, description="Error while generate share link")
+        reflink = project.reflink
+        if reflink == None:
+            logger.error("Error while getting share link")
+            return Callback(status=2, description="Error while getting share link")
         
         logger.info("New share link for {pid} of {user} created".format(pid=pid, user=username))
         
-        return Callback(data=newLink)
+        return Callback(data=reflink)
 
     def UseLinkProject(self, username: str, link: str) -> Callback:
         
@@ -314,20 +330,27 @@ class ProjectManager():
         
         manager = RepositoryManager()
         
-        if not manager.UseLinkProject(username, link):
+        project = ProjectModel.query.filter_by(reflink=link).first()
+        if project == None:
+            logger.warn("Link is outdated")
+            return False
+        
+        pid  = project.pid
+
+        if not manager.UseLinkProject(username, pid):
             logger.error("Using link {link} failed".format(link=link))
             return Callback(status=1, description="Link outdated!")
         logger.info("Share link {link} used for user {user}".format(link=link, user=username))
         
         return Callback()
     
-    def CopyProject(self, username: str, pid: str) -> Callback:
+    def CopyProject(self, username: str, pid: str, isPublic: bool = False) -> Callback:
         
         logger.info("Call CopyProject()...")
         
         manager = RepositoryManager()
         
-        if not manager.IsUserProject(username, pid):
+        if not manager.IsUserProject(username, pid) and not isPublic:
             logger.error("Project {pid} of user {user} doesn't exist".format(pid=pid, user=username))
             return Callback(status=1, description="Project doesn't exists!")
         

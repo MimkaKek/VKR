@@ -1,6 +1,6 @@
 from flask import jsonify, request, Blueprint
-from app.managers import ProjectManager
-from app.common import Callback
+from app.managers import ProjectManager, UserManager
+from app.common import Callback, ProjectData
 from app.common.auth import loginRequired
 from app.common.logging import logger
 from app.cfg import ConfigInterface as cfg
@@ -48,9 +48,11 @@ def projectsCreate():
         logger.warn("'meta' field needed")
         return jsonify(Callback(status=1, description="'meta' field required").dict())
     
-    meta       = request.json["data"]["meta"]
+    meta = ProjectData()
+    meta.__dict__.update(request.json["data"]["meta"])
+    meta.owner = username
+
     templateID = None
-    
     if "tid" in request.json["data"]:
         templateID = request.json["data"]["tid"]
     
@@ -74,6 +76,14 @@ def projectUpdate(hash):
         logger.warn("'data' field needed")
         return jsonify(Callback(status=1, description="'data' field required").dict())
     data     = request.json["data"]
+
+    if "isTemplate" in data:
+        userMgr = UserManager()
+        role = userMgr.GetRole(username)
+        if role == cfg.ROLES.STUDENT:
+            logger.warn("Attempt to change some specific meta for project {pid} by user {name}".format(pid=hash, name=username))
+            data.pop("isTemplate")
+
     pManager = ProjectManager()
     callback = pManager.SetProjectMeta(username, hash, data)
     return jsonify(callback.dict())
@@ -139,3 +149,27 @@ def projectFilePreview(hash, filename):
     pManager = ProjectManager()
     callback = pManager.GeneratePage(username, hash, filename)
     return callback.data
+
+@projectBlueprint.route('/link/<hash>', methods=['GET'])
+@loginRequired(cfg.ROLES.STUDENT)
+def getShareLink(hash):
+    username = request.json["user"]["name"]
+    pManager = ProjectManager()
+    callback = pManager.GetLinkProject(username, hash)
+    return jsonify(callback.dict())
+
+@projectBlueprint.route('/link/<hash>', methods=['PUT'])
+@loginRequired(cfg.ROLES.STUDENT)
+def createShareLink(hash):
+    username = request.json["user"]["name"]
+    pManager = ProjectManager()
+    callback = pManager.CreateLinkProject(username, hash)
+    return jsonify(callback.dict())
+
+@projectBlueprint.route('/link/<hash>', methods=['PATCH'])
+@loginRequired(cfg.ROLES.STUDENT)
+def useShareLink(hash):
+    username = request.json["user"]["name"]
+    pManager = ProjectManager()
+    callback = pManager.UseLinkProject(username, hash)
+    return jsonify(callback.dict())

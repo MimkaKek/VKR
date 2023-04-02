@@ -47,6 +47,8 @@ class RepositoryManager():
             os.makedirs(ConfigInterface.GL_USERS_PATH)
         if not os.path.exists(ConfigInterface.GL_PUBLIC_PATH):
             os.makedirs(ConfigInterface.GL_PUBLIC_PATH)
+        if not os.path.exists(ConfigInterface.GL_TEMPLATES_PATH):
+            os.makedirs(ConfigInterface.GL_TEMPLATES_PATH)
     
     def InitDefault(self, pid) -> bool:
         projectPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"])
@@ -60,11 +62,13 @@ class RepositoryManager():
         logger.info("Call RepUserCreate()...")
         usrPath = os.path.join(ConfigInterface.GL_USERS_PATH, username)
         
-        os.makedirs(usrPath)
+        if not os.path.exists(usrPath):
+            os.makedirs(usrPath)
         
-        for key, value in ConfigInterface.USER_REPOS:
+        for key, value in ConfigInterface.USER_REPOS.items():
             repoPath = os.path.join(usrPath, value)
-            os.makedirs(repoPath)
+            if not os.path.exists(repoPath):
+                os.makedirs(repoPath)
         
         usrDataPath = os.path.join(usrPath, ConfigInterface.USER_DATA)
         usrData     = UserData()
@@ -120,32 +124,34 @@ class RepositoryManager():
 
     #======================================= PROJECT ===============================================
     
-    def CreateProject(self, username: str, pid: str, pData: ProjectData = ProjectData(), templateID: str = None, copy: bool = False) -> bool:
+    def CreateProject(self, username: str, pid: str, meta: ProjectData = ProjectData(), templateID: str = None, copy: bool = False) -> bool:
         
         logger.info("Call CreateProject()...")
 
         # Set Links
 
-        repo    = "t_repo" if pData.isTemplate else "p_repo"
+        repo    = "t_repo" if meta.isTemplate else "p_repo"
         usrPath = os.path.join(ConfigInterface.GL_USERS_PATH, username)
 
         glProjectPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
         lProjectPath  = os.path.join(usrPath, ConfigInterface.USER_REPOS[repo], pid)
 
-        os.makedirs(glProjectPath)
+        if not os.path.exists(glProjectPath):
+            os.makedirs(os.path.join(glProjectPath, ConfigInterface.PROJECT_REPOS["src"]))
+
         os.symlink(glProjectPath, lProjectPath)
 
-        if pData.isTemplate:
+        if meta.isTemplate:
             os.symlink(glProjectPath, os.path.join(ConfigInterface.GL_TEMPLATES_PATH, pid))
 
-        if pData.isPublic:
+        if meta.isPublic:
             os.symlink(glProjectPath, os.path.join(ConfigInterface.GL_PUBLIC_PATH, pid))
         
         logger.info("Symlink for {pid} of {user} from {link} created".format(pid=pid, user=username, link=lProjectPath))
 
         # Set MetaData
         
-        self.SetProjectMeta(pid, pData)
+        self.SetProjectMeta(pid, meta)
         
         # Use template
 
@@ -158,12 +164,6 @@ class RepositoryManager():
         if not os.path.exists(os.path.join(ConfigInterface.GL_TEMPLATES_PATH, templateID)):
             if not copy or not os.path.exists(os.path.join(ConfigInterface.GL_PROJECT_PATH, templateID)):
                 logger.error("Template {path} doesn't exists. Rollback changes".format(path=templateID))
-                s = ProjectModel.query.filter_by(pid=pid).one()
-                if s == None:
-                    logger.error("Project {pid} doesn't exists".format(pid=pid))
-                    return False
-                db.session.delete(s)
-                db.session.commit()
                 os.unlink(lProjectPath)
                 shutil.rmtree(glProjectPath)
                 return False
@@ -261,7 +261,7 @@ class RepositoryManager():
             if meta == None:
                 logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
                 return result
-            result.update({pid: {"name": meta.name, "created": meta.created, "last_updated": meta.lastUpdated, "owner": meta.owner}})
+            result.update({pid: {"name": meta.name, "description": meta.description, "created": meta.created, "last_updated": meta.lastUpdated, "owner": meta.owner}})
         
         logger.info("List of user projects getted")
         
@@ -271,7 +271,7 @@ class RepositoryManager():
         logger.info("Call IsUserProject()...")
         repo     = "t_repo" if isTemplate else "p_repo"
         sPath    = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo])
-        projects = os.listdir(sPath)        
+        projects = os.listdir(sPath)
         return pid in projects
     
     def GetTemplates(self) -> list[str]:
@@ -418,7 +418,7 @@ class RepositoryManager():
         with open(tempPath, "r") as f:
             html = f.read()
 
-        parsedHtml = BeautifulSoup(html)
+        parsedHtml = BeautifulSoup(html, "html.parser")
         try:
             for script in parsedHtml.find_all('script', {"src": re.compile(".*")}):
                 src = ""
@@ -443,38 +443,10 @@ class RepositoryManager():
     
     #======================================= SHARE ===============================================
 
-    def CreateLinkProject(self, pid: str) -> str:
-        logger.info("Call CreateLinkProject()...")
-        
-        newLink = uuid.uuid4().hex
-
-        project = ProjectModel.query.filter_by(pid=pid).first()
-        if project == None:
-            logger.error("Project doesn't exists")
-            return None
-        project.reflink = newLink
-        db.session.commit()
-        
-        logger.info("New share link {link}".format(link=newLink))
-        return newLink
-    
-    def GetLinkProject(self, pid: str) -> str:
-        project = ProjectModel.query.filter_by(pid=pid).first()
-        if project == None:
-            logger.error("Project doesn't exists")
-            return None
-        return project.reflink
-
-    def UseLinkProject(self, username: str, link: str) -> bool:
+    def UseLinkProject(self, username: str, pid: str) -> bool:
         
         logger.info("Call UseLinkProject()...")
         
-        project = ProjectModel.query.filter_by(reflink=link).first()
-        if project == None:
-            logger.warn("Link is outdated")
-            return False
-        
-        pid  = project.pid
         meta = self.GetProjectMeta(pid)
         if meta == None:
             logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
@@ -482,10 +454,10 @@ class RepositoryManager():
         
         repo = "t_repo" if meta.isTemplate else "p_repo"
 
-        glSessionPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
-        lSessionPath  = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo], pid)
+        glProjectPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
+        lProjectPath  = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo], pid)
         
-        os.symlink(glSessionPath, lSessionPath)
+        os.symlink(glProjectPath, lProjectPath)
         
         meta.permitedUsers.append(username)
         self.SetProjectMeta(pid, meta)

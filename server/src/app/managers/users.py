@@ -55,7 +55,7 @@ class UserManager():
             logger.error("Create user repository for {name} failed".format(name=username))
             return Callback(status=3, description="Create user repository failed")
         
-        u = UserModel(email, username, password, cfg.ROLES["STUDENT"])
+        u = UserModel(email, username, password, cfg.ROLES.STUDENT)
         db.session.add(u)
         db.session.commit()
         
@@ -137,3 +137,11 @@ class UserManager():
 
         logger.info("End SetRole()...")
         return Callback()
+    
+    def GetRole(self, name: str) -> Callback:
+        logger.info("Call GetRole()...")
+        callback = self.GetUser(name, None)
+        if callback.status != 0:
+            return callback
+        logger.info("End GetRole()...")
+        return callback.data.role
