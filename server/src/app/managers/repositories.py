@@ -220,6 +220,8 @@ class RepositoryManager():
         
         meta.name          += " (copy)"
         meta.permitedUsers  = []
+        meta.isTemplate     = False
+        meta.isPublic       = False
         meta.created        = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
         meta.lastUpdated    = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
         
