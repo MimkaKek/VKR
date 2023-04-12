@@ -1,4 +1,6 @@
 from flask import jsonify, request, Blueprint
+from flask_cors import cross_origin
+
 from app.managers import UserManager
 from app.common import Callback
 from app.cfg import ConfigInterface as cfg
@@ -9,22 +11,22 @@ import json
 userBlueprint = Blueprint('user_blueprint', __name__)
 
 @userBlueprint.route('/user', methods=['GET'])
-@loginRequired(cfg.ROLES.STUDENT)
+@cross_origin()
 def auth():
 
     logger.info("Auth(): begin")
 
-    email    = request.json["user"]["mail"]
-    username = request.json["user"]["name"]
+    email    = request.args.get("mail", "")
+    username = request.args.get("name", "")
 
     mgr = UserManager()
     user = mgr.GetUser(username, email).data
-    callback = Callback()
-    callback.data = user.role
-    logger.debug(callback.dump())
+    callback = Callback(data=user.role)
+    
     return jsonify(callback.dict())
 
 @userBlueprint.route('/user', methods=['PUT'])
+@cross_origin()
 def register():
     logger.debug("Register user: begin")
 
@@ -47,6 +49,7 @@ def register():
     return jsonify(callback.dict())
 
 @userBlueprint.route('/user', methods=['PATCH'])
+@cross_origin()
 @loginRequired(cfg.ROLES.ADMIN)
 def setUserRole():
     logger.debug("Update user: begin")
@@ -66,6 +69,7 @@ def setUserRole():
     return jsonify(callback.dict())
 
 @userBlueprint.route('/user', methods=['DELETE'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def removeUser():
     logger.debug("Remove user: begin")
@@ -79,6 +83,7 @@ def removeUser():
     return jsonify(callback.dict())
 
 @userBlueprint.route('/users', methods=['GET'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def userList():
     logger.debug("List users: begin")

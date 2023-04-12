@@ -36,7 +36,7 @@ class ProjectManager():
         db.session.commit()
 
         logger.info("Project {pid} for user {user} created".format(pid=newPID, user=username))
-        return Callback(data=newPID)
+        return self.GetProject(username, newPID)
 
     def RemoveProject(self, username: str, pid: str) -> Callback:
         logger.info("Call RemoveProject()...")
@@ -76,18 +76,8 @@ class ProjectManager():
         
         for pid in pDict:
             actions = {
-                "open": {
-                    "url": "/project/" + pid,
-                    "method": "GET"
-                },
-                "edit": {
-                    "url": "/project/" + pid,
-                    "method": "PATCH"
-                },
-                "delete": {
-                    "url": "/project/" + pid,
-                    "method": "DELETE"
-                }
+                "url": "/project/" + pid,
+                "methods": ["GET", "PATCH", "DELETE"]
             }
             pDict[pid].update({"actions": actions})
 
@@ -105,10 +95,8 @@ class ProjectManager():
         
         for pid in pDict:
             actions = {
-                "open": {
-                    "url": "/project/" + pid,
-                    "method": "GET"
-                }
+                "url": "/project/" + pid,
+                "methods": "GET"
             }
             pDict[pid].update({"actions": actions})
 
@@ -148,18 +136,8 @@ class ProjectManager():
 
         for file in projectFiles:
             actions = {
-                    "open": {
-                        "url": "/project/" + pid + "/" + file,
-                        "method": "GET"
-                    },
-                    "edit": {
-                        "url": "/project/" + pid + "/" + file,
-                        "method": "PATCH"
-                    },
-                    "delete": {
-                        "url": "/project/" + pid + "/" + file,
-                        "method": "DELETE"
-                    }
+                    "url": "/project/" + pid + "/" + file,
+                    "methods": ["GET", "PATCH", "DELETE"]
             }
             result[file] = {"actions": actions}
 
@@ -365,5 +343,5 @@ class ProjectManager():
             logger.error("Copy project {pid} of user {user} failed".format(pid=pid, user=username))
             return Callback(status=2, description="Copy failed")
         
-        return Callback()
+        return self.GetProject(username, newPID)
         

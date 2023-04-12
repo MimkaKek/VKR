@@ -1,4 +1,6 @@
 from flask import jsonify, request, Blueprint
+from flask_cors import cross_origin
+
 from app.managers import ProjectManager, UserManager
 from app.common import Callback, ProjectData
 from app.common.auth import loginRequired
@@ -8,6 +10,7 @@ from app.cfg import ConfigInterface as cfg
 projectBlueprint = Blueprint('project_blueprint', __name__)
 
 @projectBlueprint.route('/templates_all', methods=['GET'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def templatesAllList():
     pManager = ProjectManager()
@@ -15,7 +18,8 @@ def templatesAllList():
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/templates', methods=['GET'])
-@loginRequired(cfg.ROLES.STUDENT)
+@cross_origin()
+@loginRequired(cfg.ROLES.TEACHER)
 def templatesList():
     username = request.json["user"]["name"]
     pManager = ProjectManager()
@@ -23,6 +27,7 @@ def templatesList():
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/public_projects', methods=['GET'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def publicProjects():
     pManager = ProjectManager()
@@ -30,6 +35,7 @@ def publicProjects():
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/projects', methods=['GET'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectsList():
     username = request.json["user"]["name"]
@@ -38,6 +44,7 @@ def projectsList():
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/projects', methods=['PUT'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectsCreate():
     username = request.json["user"]["name"]
@@ -61,6 +68,7 @@ def projectsCreate():
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>', methods=['GET'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectGet(hash):
     username = request.json["user"]["name"]
@@ -69,6 +77,7 @@ def projectGet(hash):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>', methods=['PATCH'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectUpdate(hash):
     username = request.json["user"]["name"]
@@ -89,6 +98,7 @@ def projectUpdate(hash):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>', methods=['DELETE'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectRemove(hash):
     username = request.json["user"]["name"]
@@ -97,6 +107,7 @@ def projectRemove(hash):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>', methods=['POST'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectCopy(hash):
     username = request.json["user"]["name"]
@@ -105,6 +116,7 @@ def projectCopy(hash):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['GET'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFileGet(hash, filename):
     username = request.json["user"]["name"]
@@ -113,6 +125,7 @@ def projectFileGet(hash, filename):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['PATCH'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFileSet(hash, filename):
     username = request.json["user"]["name"]
@@ -127,6 +140,7 @@ def projectFileSet(hash, filename):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['DELETE'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFileDelete(hash, filename):
     username = request.json["user"]["name"]
@@ -134,7 +148,17 @@ def projectFileDelete(hash, filename):
     callback = pManager.RemoveProjectFile(username, hash, filename)
     return jsonify(callback.dict())
 
+# @projectBlueprint.route('/project/<hash>/<filename>', methods=['POST'])
+# @cross_origin()
+# @loginRequired(cfg.ROLES.STUDENT)
+# def copyFile(hash, filename):
+#     username = request.json["user"]["name"]
+#     pManager = ProjectManager()
+#     callback = pManager(username, hash, filename)
+#     return jsonify(callback.dict())
+
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['PUT'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFileCreate(hash, filename):
     username = request.json["user"]["name"]
@@ -143,6 +167,7 @@ def projectFileCreate(hash, filename):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>/preview', methods=['GET'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFilePreview(hash, filename):
     username = request.json["user"]["name"]
@@ -151,6 +176,7 @@ def projectFilePreview(hash, filename):
     return callback.data
 
 @projectBlueprint.route('/link/<hash>', methods=['GET'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def getShareLink(hash):
     username = request.json["user"]["name"]
@@ -159,6 +185,7 @@ def getShareLink(hash):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/link/<hash>', methods=['PUT'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def createShareLink(hash):
     username = request.json["user"]["name"]
@@ -167,6 +194,7 @@ def createShareLink(hash):
     return jsonify(callback.dict())
 
 @projectBlueprint.route('/link/<hash>', methods=['PATCH'])
+@cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def useShareLink(hash):
     username = request.json["user"]["name"]

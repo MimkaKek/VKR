@@ -18,19 +18,16 @@ export default {
     },
     methods: {
         Login() {
-            return 'Foo'
+            this.$store.dispatch('auth/login', {name: this.formName, pass: this.formPass, mail: ""})
         },
         ToRegister() {
             this.$router.push({ name: "register" })
         }
     },
     watch: {
-    option: {
-    }
+        option: {}
     },
-    computed: {
-    ...mapGetters(["option"]),
-    }
+    computed: {}
 }
 
 </script>

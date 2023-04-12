@@ -87,8 +87,15 @@ class UserManager():
         
         logger.info("Call ListUsers()...")
         manager = RepositoryManager()
-        users = manager.RepUsersList()
-        return Callback(data=users)
+        usersList = manager.RepUsersList()
+        usersDict = dict()
+
+        for user in usersList:
+            callback = self.GetUser(user, "")
+            role     = callback.data.role
+            usersDict.update({user: role})
+
+        return Callback(data=usersDict)
 
     def ValidateUser(self, name: str, email: str, password: str) -> Callback:
         
@@ -104,19 +111,23 @@ class UserManager():
             return Callback(data=user.role)
         return Callback(status=2, description="Wrong password!")
     
-    def GetUser(self, name: str, email: str) -> Callback:
+    def GetUser(self, username: str, email: str) -> Callback:
 
         logger.info("Call GetUser()...")
 
-        user = UserModel.query.filter_by(username=name).first()
-        if user is None:
-            logger.warn("Can't find user by username = {username}!".format(username=name))
-            user = UserModel.query.filter_by(email=email).first()
-            if user is None:
-                logger.warn("User doesn't exists!")
-                return Callback(status=1, description="User doesn't exists!")
+        user = UserModel.query.filter_by(username=username).first()
+        if user is not None:
+            return Callback(data=user)
+        
+        logger.warn("Can't find user by username = {username}!".format(username=username))
+
+        user = UserModel.query.filter_by(email=email).first()
+        if user is not None:
+            return Callback(data=user)
+        
+        logger.warn("User doesn't exists!")
+        return Callback(status=1, description="User doesn't exists!")
             
-        return Callback(data=user)
 
     def SetRole(self, name: str, newRole: str) -> Callback:
 

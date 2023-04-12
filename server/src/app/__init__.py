@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from config import Config
 
 db = SQLAlchemy()
@@ -7,6 +8,9 @@ db = SQLAlchemy()
 def create_app(config_class = Config):
     app = Flask(__name__, template_folder="/var/vkr/projects")
     app.config.from_object(config_class)
+
+    cors = CORS(app)
+    app.config['CORS_HEADERS'] = 'Content-Type'
 
     db.init_app(app)
 
