@@ -5,6 +5,7 @@ from app.managers import RepositoryManager, ProjectManager
 from app.cfg import ConfigInterface as cfg
 from app import db
 
+import uuid
 class UserManager():
 
     def __init__(self) -> None:
@@ -55,32 +56,19 @@ class UserManager():
             logger.error("Create user repository for {name} failed".format(name=username))
             return Callback(status=3, description="Create user repository failed")
         
-        u = UserModel(email, username, password, cfg.ROLES.STUDENT)
+        sid = uuid.uuid4().hex
+        u = UserModel(email, username, password, cfg.ROLES.STUDENT, sid)
         db.session.add(u)
         db.session.commit()
         
         logger.info("User registered...")
+        return Callback(data={"sid": sid, "role": 3})
 
-        return Callback()
-
-    def RemoveUser(self, username: str) -> Callback:
-        
+    def RemoveUser(self, user: UserModel) -> Callback:
         logger.debug("Call RemoveUser()...")
-        
-        if not self._IsUsernameExist(username):
-            logger.warn("Username doesn't exist")
-            return Callback(status=1, description="Username doesn't exist")
-        
-        manager = RepositoryManager()
-        if not manager.RepUserRemove(username):
-            logger.error("Remove user repository for {name} failed".format(name=username))
-            return Callback(status=2, description="Remove user repository failed")
-        
-        user = UserModel.query.filter_by(username=username).one()
         db.session.delete(user)
         db.session.commit()
-
-        logger.info("User {user} removed...".format(user=username))
+        logger.info("User {user} removed...".format(user=user.username))
         return Callback()
 
     def ListUsers(self) -> Callback:
@@ -97,62 +85,66 @@ class UserManager():
 
         return Callback(data=usersDict)
 
-    def ValidateUser(self, name: str, email: str, password: str) -> Callback:
-        
-        logger.info("Call ValidateUser()...")
-        
-        callback = self.GetUser(name, email)
-        if callback.status != 0:
-            return callback
-        user = callback.data
-        
-        logger.info("Checking password")
+    def ValidateUser(self, user: UserModel, password: str) -> Callback:
         if user.CheckPassword(password):
-            return Callback(data=user.role)
-        return Callback(status=2, description="Wrong password!")
+            return Callback()
+        return Callback(status=1, description="Wrong password!")
     
-    def GetUser(self, username: str, email: str) -> Callback:
+    def GetUser(self, username: str = None, email: str = None, sid: str = None) -> Callback:
 
         logger.info("Call GetUser()...")
+        logger.debug("{name} | {mail} | {sid}".format(name=username, mail=email, sid=sid))
 
-        user = UserModel.query.filter_by(username=username).first()
-        if user is not None:
-            return Callback(data=user)
-        
-        logger.warn("Can't find user by username = {username}!".format(username=username))
+        if username is not None:
+            user = UserModel.query.filter_by(username=username).first()
+            if user is not None:
+                return Callback(data=user)
 
-        user = UserModel.query.filter_by(email=email).first()
-        if user is not None:
-            return Callback(data=user)
+        if email is not None:
+            user = UserModel.query.filter_by(email=email).first()
+            if user is not None:
+                return Callback(data=user)
+            
+        if sid is not None:
+            user = UserModel.query.filter_by(sid=sid).first()
+            if user is not None:
+                return Callback(data=user)
         
         logger.warn("User doesn't exists!")
         return Callback(status=1, description="User doesn't exists!")
             
+    def CreateSID(self, user: UserModel) -> Callback:
+        try:
+            user.sid = uuid.uuid4().hex
+            db.session.commit()
+        except Exception as e:
+            logger.error("Error while update user sid!")
+            logger.exception(e)
+            return Callback(status=1, description="Generating SID failed!")
+        return Callback()
 
-    def SetRole(self, name: str, newRole: str) -> Callback:
+    def SetRole(self, user: UserModel, newRole: str) -> Callback:
 
         logger.info("Call SetRole()...")
-
-        callback = self.GetUser(name, None)
-        if callback.status != 0:
-            return callback
-        user = callback.data
-
         try:
             user.role = newRole
             db.session.commit()
         except Exception as e:
             logger.error("Error while update user role!")
             logger.exception(e)
-            return Callback(status=1, description="Setting role failed")
+            return Callback(status=1, description="Setting role failed!")
 
         logger.info("End SetRole()...")
         return Callback()
     
-    def GetRole(self, name: str) -> Callback:
+    def GetRole(self, user: UserModel) -> Callback:
         logger.info("Call GetRole()...")
-        callback = self.GetUser(name, None)
-        if callback.status != 0:
-            return callback
+        try:
+            callback = Callback(data=user.role)
+        except Exception as e:
+            logger.error("Get role failed!")
+            logger.exception(e)
+            return Callback(status=1, description="Get role failed!")
+
         logger.info("End GetRole()...")
-        return callback.data.role
+        return callback

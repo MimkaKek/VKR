@@ -93,6 +93,10 @@ class ProjectManager():
         manager = RepositoryManager()
         pDict = manager.GetProjects(isAll)
         
+        if pDict == None:
+            logger.warn("Get user list failed. User doesn't exists.")
+            return Callback(status=1, description="User doesn't exists!")
+        
         for pid in pDict:
             actions = {
                 "url": "/project/" + pid,
@@ -100,9 +104,6 @@ class ProjectManager():
             }
             pDict[pid].update({"actions": actions})
 
-        if pDict == None:
-            logger.warn("Get user list failed. User doesn't exists.")
-            return Callback(status=1, description="User doesn't exists!")
         
         return Callback(data=pDict)
 

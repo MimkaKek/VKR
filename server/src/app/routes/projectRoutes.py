@@ -21,8 +21,14 @@ def templatesAllList():
 @cross_origin()
 @loginRequired(cfg.ROLES.TEACHER)
 def templatesList():
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+
     callback = pManager.GetUserProjects(username, isTemplate=True)
     return jsonify(callback.dict())
 
@@ -38,8 +44,14 @@ def publicProjects():
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectsList():
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+
     callback = pManager.GetUserProjects(username)
     return jsonify(callback.dict())
 
@@ -47,7 +59,15 @@ def projectsList():
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectsCreate():
-    username = request.json["user"]["name"]
+
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
+    pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     if "data" not in request.json:
         logger.warn("'data' field needed")
         return jsonify(Callback(status=1, description="'data' field required").dict())
@@ -62,8 +82,7 @@ def projectsCreate():
     templateID = None
     if "tid" in request.json["data"]:
         templateID = request.json["data"]["tid"]
-    
-    pManager = ProjectManager()
+
     callback = pManager.CreateProject(username, meta, templateID)
     return jsonify(callback.dict())
 
@@ -71,8 +90,14 @@ def projectsCreate():
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectGet(hash):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.GetProject(username, hash)
     return jsonify(callback.dict())
 
@@ -80,15 +105,25 @@ def projectGet(hash):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectUpdate(hash):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
+    pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     if "data" not in request.json:
         logger.warn("'data' field needed")
         return jsonify(Callback(status=1, description="'data' field required").dict())
-    data     = request.json["data"]
+    data = request.json["data"]
 
     if "isTemplate" in data:
-        userMgr = UserManager()
-        role = userMgr.GetRole(username)
+        roleStatus = uManager.GetRole(user)
+        if roleStatus.status != 0:
+            return jsonify(roleStatus.dict())
+        role = roleStatus.data
+
         if role == cfg.ROLES.STUDENT:
             logger.warn("Attempt to change some specific meta for project {pid} by user {name}".format(pid=hash, name=username))
             data.pop("isTemplate")
@@ -101,8 +136,14 @@ def projectUpdate(hash):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectRemove(hash):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.RemoveProject(username, hash)
     return jsonify(callback.dict())
 
@@ -110,8 +151,14 @@ def projectRemove(hash):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectCopy(hash):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+
     callback = pManager.CopyProject(username, hash)
     return jsonify(callback.dict())
 
@@ -119,8 +166,14 @@ def projectCopy(hash):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFileGet(hash, filename):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.GetFileProject(username, hash, filename)
     return jsonify(callback.dict())
 
@@ -128,14 +181,19 @@ def projectFileGet(hash, filename):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFileSet(hash, filename):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
+    pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
     
     if "data" not in request.json:
         logger.warn("'data' field needed")
         return jsonify(Callback(status=1, description="'data' field required").dict())
     data     = request.json["data"]
     
-    pManager = ProjectManager()
     callback = pManager.SetFileProject(username, hash, filename, data)
     return jsonify(callback.dict())
 
@@ -143,26 +201,29 @@ def projectFileSet(hash, filename):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFileDelete(hash, filename):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.RemoveProjectFile(username, hash, filename)
     return jsonify(callback.dict())
-
-# @projectBlueprint.route('/project/<hash>/<filename>', methods=['POST'])
-# @cross_origin()
-# @loginRequired(cfg.ROLES.STUDENT)
-# def copyFile(hash, filename):
-#     username = request.json["user"]["name"]
-#     pManager = ProjectManager()
-#     callback = pManager(username, hash, filename)
-#     return jsonify(callback.dict())
 
 @projectBlueprint.route('/project/<hash>/<filename>', methods=['PUT'])
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFileCreate(hash, filename):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.CreateProjectFile(username, hash, filename)
     return jsonify(callback.dict())
 
@@ -170,8 +231,14 @@ def projectFileCreate(hash, filename):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def projectFilePreview(hash, filename):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.GeneratePage(username, hash, filename)
     return callback.data
 
@@ -179,8 +246,14 @@ def projectFilePreview(hash, filename):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def getShareLink(hash):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.GetLinkProject(username, hash)
     return jsonify(callback.dict())
 
@@ -188,8 +261,14 @@ def getShareLink(hash):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def createShareLink(hash):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.CreateLinkProject(username, hash)
     return jsonify(callback.dict())
 
@@ -197,7 +276,13 @@ def createShareLink(hash):
 @cross_origin()
 @loginRequired(cfg.ROLES.STUDENT)
 def useShareLink(hash):
-    username = request.json["user"]["name"]
+    sid = request.args.get('sid', None)
+
+    uManager = UserManager()
     pManager = ProjectManager()
+
+    user     = uManager.GetUser(sid=sid).data
+    username = user.username
+    
     callback = pManager.UseLinkProject(username, hash)
     return jsonify(callback.dict())

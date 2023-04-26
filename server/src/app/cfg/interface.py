@@ -15,7 +15,7 @@ class ConfigInterface():
     PRESETS_PATH      = "/app/src/app/templates"
 
     class Roles():
-        ADMIN   = 1 
+        ADMIN   = 1
         TEACHER = 2
         STUDENT = 3
 

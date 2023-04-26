@@ -245,7 +245,7 @@ class RepositoryManager():
             if meta == None:
                 logger.error("Failed get metadata for {pid}".format(pid=pid))
                 return result
-            result[pid] = {"name": meta.name, "owner": meta.owner, "created": meta.created}
+            result[pid] = {"name": meta.name, "description": meta.description, "owner": meta.owner, "lastUpdated": meta.lastUpdated}
         
         logger.info("List of all projects getted")
         return result
@@ -263,7 +263,7 @@ class RepositoryManager():
             if meta == None:
                 logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
                 return result
-            result.update({pid: {"name": meta.name, "description": meta.description, "created": meta.created, "last_updated": meta.lastUpdated, "owner": meta.owner}})
+            result.update({pid: {"name": meta.name, "description": meta.description, "created": meta.created, "lastUpdated": meta.lastUpdated, "owner": meta.owner, "isPublic": meta.isPublic}})
         
         logger.info("List of user projects getted")
         
