@@ -1,28 +1,32 @@
 <script>
 import axios from 'axios';
 import { mapGetters } from 'vuex';
+import { RouterLink } from 'vue-router';
 
 export default {
+    components: {
+        RouterLink
+    },
     name: 'Header',
     data() {
         return {
             tLogoName: 'VKR',
-            tLogin: "Войти",
             tLogout: "Выйти",
-            tSettings: "Настройки"
+            tProject: "Проекты",
+            tPubProject: "Публичные проекты",
+            tTemplates: "Шаблоны",
+            tRole: "Роли",
+            role: 1,
+            logged: false
         };
     },
     methods: {},
     computed: {
-        /* ...mapGetters(["listOpt"]),
-        selected: {
-            get() { 
-                return this.$store.state.opt;
-            },
-            set(value) { 
-                this.$store.commit('changeState', { opt: value } );
-            }
-        } */
+
+    },
+    mounted() {
+        this.role = this.$store.getters["auth/role"];
+        this.logged = this.$store.getters["auth/status"];
     }
 };
 
@@ -32,15 +36,28 @@ export default {
     
     <header class="header-main mColor">
         <ul class="panel left">
-            <li class="panel-item logo">
-                <a class="panel-logo" href="#">{{ tLogoName }}</a>
+            <li class="panel-item">
+                <RouterLink class="panel-logo" to="#">{{ tLogoName }}</RouterLink>
             </li>
             <li class="panel-divider"></li>
+            <li v-if="this.role < 4 && this.logged" class="panel-item fill">
+                <RouterLink class="panel-btn" to="/projects">{{ tProject }}</RouterLink>
+            </li>
+            <li v-if="this.role < 4 && this.logged" class="panel-item fill">
+                <RouterLink class="panel-btn" style="size: " to="/public">{{ tPubProject }}</RouterLink>
+            </li>
+            <li v-if="this.role < 3 && this.logged" class="panel-divider"></li>
         </ul>
         <ul class="panel right">
-            <li class="panel-divider"></li>
-            <li class="panel-item last">
-                <a class="panel-btn" href="#">
+            <li v-if="this.role < 3 && this.logged" class="panel-item fill">
+                <RouterLink class="panel-btn" to="/templates">{{ tTemplates }}</RouterLink>
+            </li>
+            <li v-if="this.role < 2 && this.logged" class="panel-item fill">
+                <RouterLink class="panel-btn" to="/roles">{{ tRole }}</RouterLink>
+            </li>
+            <li v-if="this.logged" class="panel-divider"></li>
+            <li v-if="this.logged" class="panel-item last">
+                <a class="panel-btn" href="/login">
                     {{ tLogout }}
                 </a>
             </li>
@@ -55,27 +72,8 @@ export default {
         background-color: rgb(51, 51, 51);
     }
 
-    .settingsMenu {
-        display: none;
-        position: absolute;
-        top: 100%;
-        background-color: rgb(51, 51, 51);
-    }
-    
-    .settingsMenu.visible {
-        display: inherit;
-    }
-
-    nav ul div {
-        min-width:170px;
-        float:none;
-        display:list-item;
-        position: relative;
-    }
-
     .header-main {
         display: flex;
-        min-height: 7.2%;
         font-size: 25px;
         position: sticky;
         top: 0;
@@ -111,14 +109,18 @@ export default {
         justify-content: flex-end;
     }
 
-    .logo {
-        margin-right: 0.625%;
+    li.fill {
+        width: 100%;
     }
 
     li.panel-item {
         display: inline-block;
         height: 100%;
-        padding: 1px;
+    }
+
+    li.space {
+        margin-left: 5px;
+        margin-right: 5px;
     }
 
     li.last {
@@ -129,6 +131,7 @@ export default {
         color: rgb(226, 226, 226);
         text-decoration: none;
         outline: none;
+        width: 100%;
     }
 
     .panel-btn {
@@ -159,34 +162,19 @@ export default {
         border: 0px;
     }
 
-    option {
-        color: rgb(226, 226, 226);
-        background-color: rgb(51, 51, 51);
-    }
-
-    option:hover {
-        background: rgb(46, 46, 46);
-    }
-
-    button.panel-btn {
-        color: rgb(226, 226, 226);
-        background-color: rgb(51, 51, 51);
-        font-size: 25px;
-    }
-
     li:last-child a {
         margin-right: 0;
     }
 
-    a:link, a:visited, a:focus, button:focus {
+    a:link, a:visited, a:focus {
         background: rgb(51, 51, 51);
     }
 
-    a:hover, button:hover {
+    a:hover {
         background: rgb(46, 46, 46);
     }
 
-    a:active, button:active {
+    a:active {
         background: rgb(40, 40, 40);;
     }
 
@@ -207,16 +195,4 @@ export default {
         background-color: rgb(51, 51, 51);
     }
 
-    select {
-        appearance: none;
-        background-color: transparent;
-        border: none;
-        padding: 0 1em 0 0;
-        margin: 0;
-        width: 100%;
-        font-family: inherit;
-        font-size: inherit;
-        cursor: inherit;
-        line-height: inherit;
-    }
 </style>

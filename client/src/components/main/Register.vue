@@ -1,6 +1,5 @@
 <script>
-import { mapGetters } from 'vuex';
-import Button from '../common/Button.vue'
+import Button from '../common/Button.vue';
 import InputText from '../common/InputText.vue';
 
 export default {
@@ -10,23 +9,44 @@ export default {
     },
     data() {
         return {
-            loginTitle: "Login",
-            regTitle: "Register",
-            formMail: "",
+            regTitle: "Регистрация",
             formName: "",
+            formMail: "",
             formPass: "",
-            formConfPass: "",
+            formPassConf: "",
+            isRegistered: false
         }
     },
     methods: {
+        ValidatePass() {
+            if (this.formPass != this.formPassConf) {
+                alert("Пароли не совпадают!");
+                return false;
+            }
+            return true;
+        },
+        Register() {
 
+            if (!this.ValidatePass()) {
+                return;
+            }
+
+            this.$store.dispatch('auth/register', {name: this.formName, pass: this.formPass, mail: this.formMail}).then(() => {
+                if (this.$store.getters['auth/status']) {
+                    this.$router.push('/projects');
+                }
+                else {
+                    alert("Регистрация не удалась!");
+                    this.formName = "";
+                    this.formPassConf = "";
+                    this.formMail = "";
+                    this.formPass = "";
+                }
+            });
+        }
     },
-    watch: {
-    option: {
-    }
-    },
-    computed: {
-    ...mapGetters(["option"]),
+    mounted() {
+        this.$store.commit('auth/logout');
     }
 }
 
@@ -35,52 +55,66 @@ export default {
 <template>
     <div class="main">
         <div class="box">
-            Регистрация
-            <InputText v-model="formName" :placeholder="'Почта'"/>
-            <InputText v-model="formName" :placeholder="'Имя'"/>
-            <InputText v-model="formPass" :placeholder="'Пароль'"/>
-            <InputText v-model="formConfPass" :placeholder="'Подтвердите пароль'"/>
-            <Button class="log-btn" title="Зарегистрироваться" func=""></Button>
+            <div class="form">
+                {{ this.regTitle }}
+                <InputText v-model="this.formName" :placeholder="'Аккаунт'"/>
+                <InputText v-model="this.formMail" :placeholder="'Почта'"/>
+                <InputText v-model="this.formPass" :placeholder="'Пароль'"/>
+                <InputText v-model="this.formPassConf" :placeholder="'Подтверждение пароля'"/>
+            </div>
+            <div class="form-btns">
+                <Button class="log-btn first" :title="'Зарегистрироваться'" :func="this.Register"></Button>
+            </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-
-.log-btn {
-    margin-top: 10px;
-}
-
 .main {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 100%;
+    padding-top: 65px;
     display: flex;
-    min-height: 92.8%;
     background-color: rgb(41, 41, 41);
     align-items: center;
     justify-content: center;
 }
 
+.form {
+    display: flex;
+    flex: 0 1 20%;
+    flex-direction: column;
+    align-items: center;
+}
+
 .box {
     font-size: 20px;
-    display: flex;
     background-color: rgb(55, 55, 55);
-    flex: 0 1 20%;
     padding: 10px;
     border-radius: 10px;
     border: 2px solid rgb(88 88 88);
-    flex-direction: column;
-    align-items: center;
 }
 
 .box input.first {
     margin-top: 10px;
 }
 
-.box span {
-    font-size: 12px;
+.log-btn {
+    display: inline;
+    margin-top: 10px;
 }
- 
-.link {
-    color: rgb(60, 113, 192)
+
+.form-btns {
+    padding-left: 10px;
+    padding-right: 10px;
+    display: flex;
+    flex-direction: column;
+}
+.box .log-btn.first {
+    margin-right: 5px;
 }
 
 </style>

@@ -3,22 +3,18 @@
 import axios from 'axios'
 
 const state = () => ({
-    name: "",
-    mail: "",
-    pass: "",
+    sid: null,
+    role: 0,
     status: false
 })
   
 // getters
 const getters = {
-    name: state => {
-        return state.name;
+    sid: state => {
+        return state.sid;
     },
-    mail: state => {
-        return state.mail;
-    },
-    pass: state => {
-        return state.pass;
+    role: state => {
+        return state.role;
     },
     status: state => {
         return state.status;
@@ -27,67 +23,80 @@ const getters = {
 
 // actions
 const actions = {
-    login: (state, payload) => {
+    register: ({ commit }, user) => {
         const path = 'http://localhost:8000/user';
 
-        const config = {
-            method: 'get',
-            url: 'http://webcode.me',
-            headers: { 'User-Agent': 'Axios - console app' }
-        }
-
-        const data = {
-            user: {
-                name: payload.name,
-                mail: payload.mail,
-                pass: payload.pass
-            }
+        const parameters = {
+            name: user.name,
+            mail: user.mail,
+            pass: user.pass
         };
-        const strData = JSON.stringify(data);
+
         const headers = {
             'Content-Type': 'application/json'
         };
-        axios
-            .get(path, {headers: headers, data: strData})
-            .then((response) => {
-                if (response.data.status == 0) {
-                    console.debug("Logged succesfuly!");
-                    
-                    state.status = true;
-                    state.mail   = payload.mail;
-                    state.name   = payload.name;
-                    state.pass   = payload.pass;
-                }
-                else {
-                    console.debug("Login failed!");
-                    console.debug("Description: " + response.data.description);
-                }
-            })
-            .catch((error) => {
-                console.error(error);
-            });
+
+        return axios.put(path, null, {params: parameters, headers: headers})
+                    .then((response) => {
+                        if (response.data.status == 0) {
+                            console.debug("Registered succesfuly!");
+                            commit('login', response.data.data);
+                        }
+                        else {
+                            console.debug("Register failed!");
+                            console.debug("Description: " + response.data.description);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error(error);
+                    });
     },
-    logout: (state, payload) => {
-        state.status = false;
-        state.mail   = "";
-        state.name   = "";
-        state.pass   = "";
+    login: ({ commit }, user) => {
+        const path = 'http://localhost:8000/user';
+
+        const parameters = {
+            name: user.name,
+            mail: user.mail,
+            pass: user.pass
+        };
+
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        return axios.post(path, null, {params: parameters, headers: headers})
+                    .then((response) => {
+                        if (response.data.status == 0) {
+                            console.debug("Logged succesfuly!");
+                            console.log(user);
+                            var uData = response.data.data;
+                            commit('login', uData);
+                        }
+                        else {
+                            console.debug("Login failed!");
+                            console.debug("Description: " + response.data.description);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error(error);
+                    });
+    },
+    logout: ({ commit }) => {
+        commit('logout');
     }
 }
 
 // mutations
 const mutations = {
-    login: (state, payload) => {
+    login: (state, uData) => {
         state.status = true;
-        state.mail   = payload.mail;
-        state.name   = payload.name;
-        state.pass   = payload.pass;
+        state.sid    = uData.sid;
+        state.role   = uData.role;
     },
-    logout: (state, payload) => {
+    logout: (state) => {
         state.status = false;
-        state.mail   = "";
-        state.name   = "";
-        state.pass   = "";
+        state.sid    = null;
+        state.role   = 0;
     }
 }
 

@@ -2,6 +2,7 @@
 import { mapGetters } from 'vuex';
 import Button from '@/components/common/Button.vue';
 import InputText from '../common/InputText.vue';
+import auth from '../../store/modules/auth';
 
 export default {
     components: {
@@ -10,7 +11,7 @@ export default {
     },
     data() {
         return {
-            loginTitle: "Login",
+            loginTitle: "Авторизация",
             regTitle: "Register",
             formName: "",
             formPass: "",
@@ -18,16 +19,28 @@ export default {
     },
     methods: {
         Login() {
-            this.$store.dispatch('auth/login', {name: this.formName, pass: this.formPass, mail: ""})
+            this.$store.dispatch('auth/login', {name: this.formName, pass: this.formPass, mail: ""}).then(() => {
+                if (this.$store.getters['auth/status']) {
+                    this.$router.push('/projects');
+                }
+                else {
+                    alert("Авторизация не удалась!");
+                    this.formName = "";
+                    this.formPass = "";
+                }
+            });
         },
         ToRegister() {
-            this.$router.push({ name: "register" })
+            this.$router.push('/register');
         }
     },
     watch: {
         option: {}
     },
-    computed: {}
+    computed: {},
+    mounted() {
+        this.$store.commit('auth/logout');
+    }
 }
 
 </script>
@@ -36,11 +49,11 @@ export default {
     <div class="main">
         <div class="box">
             <div class="form">
-                Вход
+                {{ this.loginTitle }}
                 <InputText v-model="formName" :placeholder="'Имя или почта'"/>
                 <InputText v-model="formPass" :placeholder="'Пароль'"/>
             </div>
-            <div>
+            <div class="form-btns">
                 <Button class="log-btn first" :title="'Регистрация'" :func="ToRegister"></Button>
                 <Button class="log-btn" :title="'Войти'" :func="Login"></Button>
             </div>
@@ -50,8 +63,13 @@ export default {
 
 <style scoped>
 .main {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 100%;
+    padding-top: 65px;
     display: flex;
-    min-height: 92.8%;
     background-color: rgb(41, 41, 41);
     align-items: center;
     justify-content: center;
@@ -81,6 +99,12 @@ export default {
     margin-top: 10px;
 }
 
+.form-btns {
+    padding-left: 10px;
+    padding-right: 10px;
+    display: flex;
+    flex-direction: column;
+}
 .box .log-btn.first {
     margin-right: 5px;
 }

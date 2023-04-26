@@ -10,13 +10,17 @@ export default {
             default() {
                 return null;
             }
+        },
+        fArgs: {
+            type: Array,
+            default: null
         }
     }
 }
 </script>
 
 <template>
-    <button class="f-btn" @click="func()">
+    <button class="f-btn" @click="func.apply(this, this.fArgs)">
         {{ title }}
     </button>
 </template>
@@ -25,7 +29,6 @@ export default {
 
 .f-btn {
     display: inline-block;
-    border: 0px;
     padding: 8px;
     border: 1px;
     border-style: solid;
@@ -33,6 +36,8 @@ export default {
     font-size: 20px;
     color: rgb(226, 226, 226);
     background-color: rgb(58, 58, 58);
+    width: 100%;
+    height: 100%;
 }
 
 .f-btn:link, .f-btn:visited, .f-btn:focus {

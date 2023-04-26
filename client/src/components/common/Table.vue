@@ -1,49 +1,30 @@
 <script>
-import Button from "../common/Button.vue"
+import Button from './Button.vue';
 
 export default {
-
     components: {
         Button
     },
-
     props: {
-        tableHead: {
-            type: Object,
-            default: {msg: "PLACEHOLDER"}
-        },
-        tableInfo: {
+        tHead: {
             type: Array,
-            default: [{msg: "PLACEHOLDER"}]
+            default: ["Head 1", "Head 2", "Head 3"]
         },
-        backFunc: {
-            type: Function,
-            default() {
-                return null;
-            }
+        tData: {
+            type: Array,
+            default: [["Data 1-1", "Data 1-2", "Data 1-3"], ["Data 2-1", "Data 2-2", "Data 2-3"], ["Data 3-1", "Data 3-2", "Data 3-3"]]
         },
-        updateFunc: {
-            type: Function,
-            default() {
-                return null;
-            }
+        tActions: {
+            type: Array,
+            default: [[null, null, null], [null, null, null], [null, null, null]]
         },
-        backBtn: {
-            type: Boolean,
-            default: true
-        },
-        updBtn: {
-            type: Boolean,
-            default: true
+        isArray: {
+            type: Array,
+            default: [false, false, false]
         }
     },
     data() {
-        return {
-            text: {
-                buttonBack: "Назад",
-                buttonUpdate: "Обновить"
-            }
-        }
+        return {}
     }
 }
 </script>
@@ -51,19 +32,39 @@ export default {
 <template>
     <table>
         <tr>
-            <th v-for="head in tableHead">{{ head }}</th>
+            <th v-for="headItem in tHead">
+                {{ headItem }} 
+            </th>
         </tr>
-        <template v-for="row in tableInfo">
+        <template v-for="(line, yPos) in tData">
             <tr>
-                <td v-for="item in row">{{ item }}</td>
+                <template v-for="(item, xPos) in line">
+                    <template v-if="this.isArray[xPos]">
+                        <td class="btn">
+                            <div class="many-items-inline">
+                                <template v-for="(subItem, zPos) in item">
+                                    <template v-if="this.tActions[yPos][xPos][zPos] == null">
+                                        {{ subItem }}
+                                    </template>
+                                    <template class="btn" v-else>
+                                        <Button :title="subItem" :func="this.tActions[yPos][xPos][zPos][0]" :fArgs="this.tActions[yPos][xPos][zPos][1]"></Button>
+                                    </template>
+                                </template>
+                            </div>
+                        </td>
+                    </template>
+                    <template v-else>
+                        <td v-if="this.tActions[yPos][xPos] == null">
+                            {{ item }}
+                        </td>
+                        <td class="btn" v-else>
+                            <Button :title="item" :func="this.tActions[yPos][xPos][0]" :fArgs="this.tActions[yPos][xPos][1]"></Button>
+                        </td>
+                    </template>
+                </template>
             </tr>
         </template>
     </table>
-    <div class="h-divider"></div>
-    <div>
-        <Button v-if="backBtn" style="margin-left: 0px" class="btn-size" :title="text.buttonBack" :func="backFunc"></Button>
-        <Button v-if="updBtn" style="margin-left: 0px" class="btn-size" :title="text.buttonUpdate" :func="updateFunc"></Button>
-    </div>
 </template>
 
 <style scoped>
@@ -82,16 +83,26 @@ table {
   border-collapse: collapse;
   width: 100%;
   margin: 0px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 td, th {
   border: 1px solid #969696;
-  text-align: left; 
+  text-align: center; 
   padding: 8px;
 }
 
-tr:nth-child(even) {
-  background-color: #3f3f3f;
+td.btn, div.btn {
+    padding: 0px;
+}
+.many-items-inline {
+    display: flex;
+}
+tr {
+  background-color: rgb(65, 65, 65);
 }
 
 </style>

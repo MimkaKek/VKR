@@ -12,5 +12,5 @@ export default {
 
 <template>
   <Header />
-  <Projects />
+  <Projects :type="'public'" />
 </template>
