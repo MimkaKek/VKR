@@ -5,6 +5,7 @@ class ConfigInterface():
     
     USER_DATA         = "user.json"
     PROJECT_DATA      = "project.json"
+    PRESET_DATA       = "template.json"
     
     BASE_PATH         = "/var/vkr"
     GL_USERS_PATH     = BASE_PATH + "/users"

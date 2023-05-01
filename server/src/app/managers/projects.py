@@ -6,16 +6,26 @@ from app.common.logging import logger
 from app.models import ProjectModel
 from app import db
 
+from datetime import datetime
+
 class ProjectManager():
 
     def __init__(self) -> None:
         pass
-
-    def InitDefault(self, pid) -> bool:
-            mgr = RepositoryManager()
-            return mgr.InitDefault(pid)
     
-    def CreateProject(self, username: str, meta: ProjectData, template: str = None) -> Callback:
+    def CreatePresets(self, username: str) -> bool:
+        mgr  = RepositoryManager()
+        presets = mgr.ListPresets()
+        for preset in presets:
+            tmp  = mgr.GetMetaPreset(preset)
+            meta = ProjectData(owner=username, name=tmp.name, desc=tmp.description, isTemplate=True)
+            pid  = self.CreateProject(username, meta).data["pid"]
+            mgr.InitFromPreset(pid, preset)
+
+        return True
+
+
+    def CreateProject(self, username: str, meta: ProjectData = ProjectData(), template: str = None) -> Callback:
         logger.info("Call CreateProject()...")
         
         newPID   = uuid.uuid4().hex
@@ -142,7 +152,7 @@ class ProjectManager():
             }
             result[file] = {"actions": actions}
 
-        return Callback(data={"meta": meta.__dict__, "files": result})
+        return Callback(data={"pid": pid, "meta": meta.__dict__, "files": result})
     
     def GetTemplatesWithNames(self) -> Callback:
         mgr = RepositoryManager()
@@ -242,6 +252,7 @@ class ProjectManager():
             metaOld = manager.GetProjectMeta(pid)
             metaNew = copy.deepcopy(metaOld)
             metaNew.__dict__.update(data)
+            metaNew.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
             manager.SetProjectMeta(pid, metaNew)
             manager.UpdateLinks(pid, metaOld, metaNew)
         except Exception as e:

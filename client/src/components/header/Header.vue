@@ -4,6 +4,12 @@ import { mapGetters } from 'vuex';
 import { RouterLink } from 'vue-router';
 
 export default {
+    props: {
+      logoBack: {
+        type: Boolean,
+        default: false
+      },
+    },
     components: {
         RouterLink
     },
@@ -16,11 +22,15 @@ export default {
             tPubProject: "Публичные проекты",
             tTemplates: "Шаблоны",
             tRole: "Роли",
-            role: 1,
+            role: 3,
             logged: false
         };
     },
-    methods: {},
+    methods: {
+        goBack() {
+            this.$router.back();
+        }
+    },
     computed: {
 
     },
@@ -37,7 +47,13 @@ export default {
     <header class="header-main mColor">
         <ul class="panel left">
             <li class="panel-item">
-                <RouterLink class="panel-logo" to="#">{{ tLogoName }}</RouterLink>
+                <template v-if="this.logoBack">
+                    <RouterLink class="panel-logo" to="#" v-on:click="this.goBack()"> ❮ </RouterLink>
+                </template>
+                <template v-else>
+                    <RouterLink class="panel-logo" to="#">{{ tLogoName }}</RouterLink>
+                </template>
+                
             </li>
             <li class="panel-divider"></li>
             <li v-if="this.role < 4 && this.logged" class="panel-item fill">

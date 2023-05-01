@@ -14,13 +14,25 @@ export default {
         fArgs: {
             type: Array,
             default: null
+        },
+        locked: {
+            type: Boolean,
+            default: false
+        }
+    },
+    methods: {
+        doNothing() {
+            return null;
         }
     }
 }
 </script>
 
 <template>
-    <button class="f-btn" @click="func.apply(this, this.fArgs)">
+    <button v-if="!locked" class="f-btn" @click="func.apply(this, this.fArgs)">
+        {{ title }}
+    </button>
+    <button v-else class="f-btn" @click="this.doNothing()">
         {{ title }}
     </button>
 </template>

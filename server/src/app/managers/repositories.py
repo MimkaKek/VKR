@@ -1,6 +1,6 @@
 import os
 import shutil
-import uuid
+import json
 from datetime import datetime
 from flask import render_template
 from bs4 import BeautifulSoup
@@ -50,11 +50,22 @@ class RepositoryManager():
         if not os.path.exists(ConfigInterface.GL_TEMPLATES_PATH):
             os.makedirs(ConfigInterface.GL_TEMPLATES_PATH)
     
-    def InitDefault(self, pid) -> bool:
+    def InitFromPreset(self, pid, preset) -> bool:
         projectPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"])
-        presetPath  = os.path.join(ConfigInterface.PRESETS_PATH, "DEFAULT", ConfigInterface.PROJECT_REPOS["src"])
+        presetPath  = os.path.join(ConfigInterface.PRESETS_PATH, preset, ConfigInterface.PROJECT_REPOS["src"])
         return self.RepositoryCopy(projectPath, presetPath)
-        
+
+    # =================================== PRESETS =====================================
+
+    def ListPresets(self) -> list[str]:
+        return os.listdir(os.path.join(ConfigInterface.PRESETS_PATH))
+
+    def GetMetaPreset(self, preset) -> ProjectData:
+        path = os.path.join(ConfigInterface.PRESETS_PATH, preset, ConfigInterface.PRESET_DATA)
+        with open(path, "r") as file:
+            tmp = json.load(file)
+            logger.debug(tmp)
+            return ProjectData(name=tmp['name'], desc=tmp['description'])
 
     # ==================================== USER =======================================
     
@@ -269,12 +280,15 @@ class RepositoryManager():
         
         return result
 
-    def IsUserProject(self, username: str, pid: str, isTemplate: bool = False) -> bool:
+    def IsUserProject(self, username: str, pid: str) -> bool:
         logger.info("Call IsUserProject()...")
-        repo     = "t_repo" if isTemplate else "p_repo"
-        sPath    = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo])
-        projects = os.listdir(sPath)
-        return pid in projects
+        for _, repo in ConfigInterface.USER_REPOS.items():
+            path     = os.path.join(ConfigInterface.GL_USERS_PATH, username, repo)
+            projects = os.listdir(path)
+            if pid in projects:
+                return True
+        
+        return False
     
     def GetTemplates(self) -> list[str]:
         return os.listdir(ConfigInterface.GL_TEMPLATES_PATH)

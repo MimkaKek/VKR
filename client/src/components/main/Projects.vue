@@ -168,11 +168,39 @@ export default {
             console.log("OpenProject Func call with param: " + pid);
             this.$router.push('/project/edit/' + pid);
         },
-        removeProject(pid) {
+        async removeProject(pid) {
             console.log("RemoveProject Func call with param: " + pid);
+            const path = 'http://localhost:8000/project/' + pid;
+            
+            var sid = this.$store.getters['auth/sid'];
+            const parameters = {
+                sid: sid
+            };
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            await axios.delete(path, {params: parameters, headers: headers})
+                        .then((response) => {
+                            if (response.data.status != 0) {
+                                console.error("Remove project failed!");
+                                console.error("Description: " + response.data.description);
+                                return null;
+                            }
+                            console.log("Success removed!");
+                            console.log(this.projects);
+                            delete this.projects[pid];
+                            console.log(this.projects);
+                            console.log("Dict deleted");
+                        })
+                        .catch((error) => {
+                            console.error(error);
+                        });
         },
         infoProject(pid) {
             console.log("InfoProject Func call with param: " + pid);
+            this.$router.push('/project/info/' + pid);
         },
         settingProject(pid) {
             console.log("SettingProject Func call with param: " + pid);
@@ -180,6 +208,7 @@ export default {
         },
         createProject() {
             console.log("CreateProject Func call");
+            this.$router.push('/project/create');
         }
     },
     watch: {

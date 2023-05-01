@@ -8,6 +8,7 @@ import RolesView        from '../views/RolesView.vue'
 import EditorView       from '../views/EditorView.vue'
 import InfoView         from '../views/InfoView.vue'
 import SettingsView     from '../views/SettingsView.vue'
+import CreateView       from '../views/CreateView.vue'
 import ReferView        from '../views/ReferView.vue'
 
 import store from '../store'
@@ -25,6 +26,7 @@ const router = createRouter({
     { path: '/project/edit/:pid',     name: 'editor',   component: EditorView       },
     { path: '/project/info/:pid',     name: 'info',     component: InfoView         },
     { path: '/project/settings/:pid', name: 'settings', component: SettingsView     },
+    { path: '/project/create',        name: 'create',   component: CreateView     },
     { path: '/project/ref/:pid',      name: 'useRefer', component: ReferView        }
   ]
 })

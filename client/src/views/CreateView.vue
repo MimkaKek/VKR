@@ -12,5 +12,5 @@ export default {
 
 <template>
   <Header :logo-back="true" />
-  <Settings />
+  <Settings :create="true" />
 </template>

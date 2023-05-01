@@ -20,12 +20,12 @@ class UserManager():
             return
         
         self.AddUser(username, None, password)
-        self.SetRole(username, cfg.ROLES.ADMIN)
+
+        user = self.GetUser(username).data
+        self.SetRole(user, cfg.ROLES.ADMIN)
 
         mgr = ProjectManager()
-        meta = ProjectData("DEFAULT", "Default template", username, isTemplate=True)
-        callback = mgr.CreateProject(username, meta)
-        mgr.InitDefault(callback.data)
+        mgr.CreatePresets(username)
 
     def _IsUsernameExist(self, username: str) -> bool:
         user = UserModel.query.filter_by(username=username).first()
@@ -93,7 +93,6 @@ class UserManager():
     def GetUser(self, username: str = None, email: str = None, sid: str = None) -> Callback:
 
         logger.info("Call GetUser()...")
-        logger.debug("{name} | {mail} | {sid}".format(name=username, mail=email, sid=sid))
 
         if username is not None:
             user = UserModel.query.filter_by(username=username).first()

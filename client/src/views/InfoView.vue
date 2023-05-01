@@ -1,16 +1,16 @@
 <script>
 import Header from '../components/header/Header.vue'
-import Projects  from '../components/main/Projects.vue'
+import Settings from '../components/main/Settings.vue'
 
 export default {
   components: {
     Header,
-    Projects
+    Settings
   }
 }
 </script>
 
 <template>
-  <Header />
-  <Projects />
+  <Header :logo-back="true" />
+  <Settings :locked="true" />
 </template>
