@@ -63,7 +63,9 @@ export default {
                 <InputText v-model="this.formPassConf" :placeholder="'Подтверждение пароля'"/>
             </div>
             <div class="form-btns">
-                <Button class="log-btn first" :title="'Зарегистрироваться'" :func="this.Register"></Button>
+                <Button class="log-btn first" :func="this.Register">
+                    Зарегистрироваться
+                </Button>
             </div>
         </div>
     </div>

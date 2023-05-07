@@ -9,7 +9,8 @@ def loginRequired(requiredRole = cfg.ROLES.STUDENT):
         def wrapper(*args, **kwargs):
             
             sid = request.args.get('sid', "")
-
+            logger.debug("CHECK 1")
+            logger.debug(sid)
             mgr = UserManager()
             userStatus = mgr.GetUser(sid=sid)
             if userStatus.status != 0:

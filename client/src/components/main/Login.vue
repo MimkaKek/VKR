@@ -34,10 +34,6 @@ export default {
             this.$router.push('/register');
         }
     },
-    watch: {
-        option: {}
-    },
-    computed: {},
     mounted() {
         this.$store.commit('auth/logout');
     }
@@ -54,8 +50,12 @@ export default {
                 <InputText v-model="formPass" :placeholder="'Пароль'"/>
             </div>
             <div class="form-btns">
-                <Button class="log-btn first" :title="'Регистрация'" :func="ToRegister"></Button>
-                <Button class="log-btn" :title="'Войти'" :func="Login"></Button>
+                <Button class="log-btn first" :func="ToRegister">
+                    Регистрация
+                </Button>
+                <Button class="log-btn" :func="Login">
+                    Войти
+                </Button>
             </div>
         </div>
     </div>

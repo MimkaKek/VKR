@@ -320,11 +320,20 @@ class RepositoryManager():
         logger.info("File {filename} of project {pid} getted".format(filename=filename, pid=pid)) 
         return result
     
-    def SetProjectFile(self, pid: str, filename: str, data: str) -> bool:
+    def SetProjectFile(self, pid: str, filename: str, data: dict[str, str]) -> bool:
         logger.info("Call SetProjectFile()...")
+
         filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
-        with open(filePath, "w") as file:
-            file.write(data)
+
+        content = data.get("content", None)
+        if content is not None:
+            with open(filePath, "w") as file:
+                file.write(content)
+
+        newName = data.get("name", None)
+        if newName is not None and filename != newName:
+            newFilePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], newName)
+            os.rename(filePath, newFilePath)
 
         meta = self.GetProjectMeta(pid)
         if meta == None:

@@ -1,16 +1,16 @@
 <script>
 import Header from '../components/header/Header.vue'
-import Login  from '../components/main/Login.vue'
+import Editor from '../components/main/Editor.vue'
 
 export default {
   components: {
     Header,
-    Login
+    Editor
   }
 }
 </script>
 
 <template>
-  <Header />
-  <Login />
+  <Header :logoBack="true" :hideMenu="true" />
+  <Editor />
 </template>

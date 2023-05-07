@@ -38,7 +38,7 @@ export default {
                 this.getPublicData();
                 return;
             }
-                
+            
             this.getProjectsData();
             return;
         },
@@ -65,6 +65,7 @@ export default {
                             this.projects = response.data.data;
 
                             for (let pKey in this.projects) {
+                                this.projects[pKey].dataKey = this.tData.length;
                                 this.tData.push([this.projects[pKey].name,
                                                  this.projects[pKey].owner,
                                                  this.projects[pKey].isPublic ? "Публичный" : "Закрытый",
@@ -106,6 +107,7 @@ export default {
                             this.projects = response.data.data;
 
                             for (let pKey in this.projects) {
+                                this.projects[pKey].dataKey = this.tData.length;
                                 this.tData.push([this.projects[pKey].name,
                                                  this.projects[pKey].owner,
                                                  this.projects[pKey].isPublic ? "Публичный" : "Закрытый",
@@ -147,6 +149,7 @@ export default {
                             this.projects = response.data.data;
 
                             for (let pKey in this.projects) {
+                                this.projects[pKey].dataKey = this.tData.length;
                                 this.projects[pKey].description = this.projects[pKey].description.slice(0, 20) + "..."
                                 this.tData.push([this.projects[pKey].name,
                                                  this.projects[pKey].description,
@@ -165,10 +168,9 @@ export default {
                         });
         },
         openProject(pid) {
-            console.log("OpenProject Func call with param: " + pid);
             this.$router.push('/project/edit/' + pid);
         },
-        async removeProject(pid) {
+        async removeProject(pid, getFunc) {
             console.log("RemoveProject Func call with param: " + pid);
             const path = 'http://localhost:8000/project/' + pid;
             
@@ -188,26 +190,21 @@ export default {
                                 console.error("Description: " + response.data.description);
                                 return null;
                             }
-                            console.log("Success removed!");
-                            console.log(this.projects);
+                            this.tData.splice(this.projects[pid].dataKey, 1);
+                            this.tActions.splice(this.projects[pid].dataKey, 1);
                             delete this.projects[pid];
-                            console.log(this.projects);
-                            console.log("Dict deleted");
                         })
                         .catch((error) => {
                             console.error(error);
                         });
         },
         infoProject(pid) {
-            console.log("InfoProject Func call with param: " + pid);
             this.$router.push('/project/info/' + pid);
         },
         settingProject(pid) {
-            console.log("SettingProject Func call with param: " + pid);
             this.$router.push('/project/settings/' + pid);
         },
         createProject() {
-            console.log("CreateProject Func call");
             this.$router.push('/project/create');
         }
     },
@@ -225,7 +222,9 @@ export default {
 <template>
     <div class="main-wrapper">
         <div v-if="this.type != 'public'" class="main-btn-wrapper">
-            <Button :func="this.createProject" :title="this.btnAdd"></Button>
+            <Button :func="this.createProject">
+                {{ this.btnAdd }}
+            </Button>
         </div>
         <div class="main-table-wrapper">
             <Table v-bind:t-head="this.tHead" v-bind:t-data="this.tData" :t-actions="this.tActions" :is-array="this.isArray"></Table>

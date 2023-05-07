@@ -1,6 +1,4 @@
 <script>
-import axios from 'axios';
-import { mapGetters } from 'vuex';
 import { RouterLink } from 'vue-router';
 
 export default {
@@ -9,6 +7,10 @@ export default {
         type: Boolean,
         default: false
       },
+      hideMenu: {
+        type: Boolean,
+        default: false
+      }
     },
     components: {
         RouterLink
@@ -43,7 +45,6 @@ export default {
 </script>
 
 <template>
-    
     <header class="header-main mColor">
         <ul class="panel left">
             <li class="panel-item">
@@ -56,19 +57,19 @@ export default {
                 
             </li>
             <li class="panel-divider"></li>
-            <li v-if="this.role < 4 && this.logged" class="panel-item fill">
+            <li v-if="this.role < 4 && this.logged && !this.hideMenu" class="panel-item fill">
                 <RouterLink class="panel-btn" to="/projects">{{ tProject }}</RouterLink>
             </li>
-            <li v-if="this.role < 4 && this.logged" class="panel-item fill">
+            <li v-if="this.role < 4 && this.logged && !this.hideMenu" class="panel-item fill">
                 <RouterLink class="panel-btn" style="size: " to="/public">{{ tPubProject }}</RouterLink>
             </li>
-            <li v-if="this.role < 3 && this.logged" class="panel-divider"></li>
+            <li v-if="this.role < 3 && this.logged && !this.hideMenu" class="panel-divider"></li>
         </ul>
         <ul class="panel right">
-            <li v-if="this.role < 3 && this.logged" class="panel-item fill">
+            <li v-if="this.role < 3 && this.logged && !this.hideMenu" class="panel-item fill">
                 <RouterLink class="panel-btn" to="/templates">{{ tTemplates }}</RouterLink>
             </li>
-            <li v-if="this.role < 2 && this.logged" class="panel-item fill">
+            <li v-if="this.role < 2 && this.logged && !this.hideMenu" class="panel-item fill">
                 <RouterLink class="panel-btn" to="/roles">{{ tRole }}</RouterLink>
             </li>
             <li v-if="this.logged" class="panel-divider"></li>

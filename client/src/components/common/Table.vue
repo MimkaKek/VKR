@@ -47,7 +47,9 @@ export default {
                                         {{ subItem }}
                                     </template>
                                     <template class="btn" v-else>
-                                        <Button :title="subItem" :func="this.tActions[yPos][xPos][zPos][0]" :fArgs="this.tActions[yPos][xPos][zPos][1]"></Button>
+                                        <Button :func="this.tActions[yPos][xPos][zPos][0]" :fArgs="this.tActions[yPos][xPos][zPos][1]">
+                                            {{ subItem }}
+                                        </Button>
                                     </template>
                                 </template>
                             </div>
@@ -58,7 +60,9 @@ export default {
                             {{ item }}
                         </td>
                         <td class="btn" v-else>
-                            <Button :title="item" :func="this.tActions[yPos][xPos][0]" :fArgs="this.tActions[yPos][xPos][1]"></Button>
+                            <Button :func="this.tActions[yPos][xPos][0]" :fArgs="this.tActions[yPos][xPos][1]">
+                                {{ item }}
+                            </Button>
                         </td>
                     </template>
                 </template>

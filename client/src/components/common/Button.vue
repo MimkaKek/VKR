@@ -29,11 +29,10 @@ export default {
 </script>
 
 <template>
-    <button v-if="!locked" class="f-btn" @click="func.apply(this, this.fArgs)">
-        {{ title }}
-    </button>
-    <button v-else class="f-btn" @click="this.doNothing()">
-        {{ title }}
+    <button class="f-btn" @click="locked ? doNothing() : func.apply(this, this.fArgs)">
+        <slot>
+            ...
+        </slot>
     </button>
 </template>
 

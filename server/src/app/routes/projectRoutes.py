@@ -220,7 +220,7 @@ def projectFileCreate(hash, filename):
 
     uManager = UserManager()
     pManager = ProjectManager()
-
+    logger.debug("CHECK 2")
     user     = uManager.GetUser(sid=sid).data
     username = user.username
     

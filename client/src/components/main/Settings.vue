@@ -192,10 +192,14 @@ export default {
                 </div>
                 <div class="menu-btn">
                     <div class="filler">
-                        <Button :locked="this.locked" :title="this.projectMeta.isPublic ? 'Публичный' : 'Закрытый'" :func="this.changePublic"></Button>
+                        <Button :locked="this.locked" :func="this.changePublic">
+                            {{ this.projectMeta.isPublic ? 'Публичный' : 'Закрытый' }}
+                        </Button>
                     </div>
                     <div v-if="this.role < 3" class="filler">
-                        <Button :locked="this.locked" :title="this.projectMeta.isTemplate ? 'Шаблон' : 'Проект'" :func="this.changeTemplate"></Button>
+                        <Button :locked="this.locked" :func="this.changeTemplate">
+                            {{ this.projectMeta.isTemplate ? 'Шаблон' : 'Проект' }}
+                        </Button>
                     </div>
                     <div v-if="this.create" class="filler">
                         <select v-model="this.selected">
@@ -207,8 +211,12 @@ export default {
                     </div>
                 </div>
                 <div v-if="!this.locked" class="save-btn">
-                    <Button v-if="this.create" :title="'Создать'" :func="this.createNewProject"></Button>
-                    <Button v-else :title="'Сохранить'" :func="this.saveProjectMeta"></Button>
+                    <Button v-if="this.create" :func="this.createNewProject">
+                        Создать
+                    </Button>
+                    <Button v-else :func="this.saveProjectMeta">
+                        Сохранить
+                    </Button>
                 </div>
             </div>
         </div>
