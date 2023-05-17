@@ -377,11 +377,12 @@ class RepositoryManager():
         logger.info("File {filename} of project {pid} removed".format(filename=filename, pid=pid))
         return True
     
-    def UpdateLinks(self, pid: str, metaOld: ProjectData, metaNew: ProjectData) -> bool:
+    def UpdateLinks(self, pid: str, username: str, metaOld: ProjectData, metaNew: ProjectData) -> bool:
         
-        projectPath  = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
-        publicPath   = os.path.join(ConfigInterface.GL_PUBLIC_PATH, pid)
-        templatePath = os.path.join(ConfigInterface.GL_TEMPLATES_PATH, pid)
+        projectPath      = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
+        publicPath       = os.path.join(ConfigInterface.GL_PUBLIC_PATH, pid)
+        templatePath     = os.path.join(ConfigInterface.GL_TEMPLATES_PATH, pid)
+        loc_templatePath = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS["t_repo"], pid)
 
         try:
             if metaOld.isPublic != metaNew.isPublic:
@@ -393,7 +394,9 @@ class RepositoryManager():
             if metaOld.isTemplate != metaNew.isTemplate:
                 if metaOld.isTemplate:
                     os.unlink(templatePath)
+                    os.unlink(loc_templatePath)
                 else:
+                    os.symlink(projectPath, loc_templatePath)
                     os.symlink(projectPath, templatePath)
         except Exception as e:
             logger.error("Update links failed for project {pid}".format(pid=pid))
@@ -447,6 +450,8 @@ class RepositoryManager():
         try:
             for script in parsedHtml.find_all('script', {"src": re.compile(".*")}):
                 src = ""
+                if "http" in script["src"]:
+                    continue
                 scriptPath = os.path.join(repPath, script["src"])
                 with open(scriptPath, "r") as file:
                     src = file.read()

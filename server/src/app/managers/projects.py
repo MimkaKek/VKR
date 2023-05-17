@@ -254,7 +254,7 @@ class ProjectManager():
             metaNew.__dict__.update(data)
             metaNew.lastUpdated = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
             manager.SetProjectMeta(pid, metaNew)
-            manager.UpdateLinks(pid, metaOld, metaNew)
+            manager.UpdateLinks(pid, username, metaOld, metaNew)
         except Exception as e:
             logger.error("Error while updating project data of {pid}".format(pid=pid))
             logger.exception(e)

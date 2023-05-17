@@ -71,6 +71,12 @@ def setUserRole():
     username = data["name"]
     newRole  = data["role"]
 
+    logger.debug("CHECK BEGIN")
+    logger.debug(data)
+    logger.debug(username)
+    logger.debug(newRole)
+    logger.debug("CHECK END")
+
     usrManager = UserManager()
     userStatus = usrManager.GetUser(username=username)
     if userStatus.status != 0:

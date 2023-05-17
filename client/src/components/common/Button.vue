@@ -1,10 +1,6 @@
 <script>
 export default {
     props: {
-        title: {
-            type: String,
-            default: "PLACEHOLDER"
-        },
         func: {
             type: Function,
             default() {

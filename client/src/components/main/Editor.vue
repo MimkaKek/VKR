@@ -153,6 +153,7 @@ export default {
                         }
 
                         this.meta = response.data.data;
+                        
                         console.log(this.meta);
                     })
                     .catch((error) => {
@@ -189,7 +190,11 @@ export default {
             </div>
         </div>
         <div class="preview">
-            <iframe seamless :srcdoc="this.preview"></iframe>
+            <iframe seamless
+                    allow="accelerometer; ambient-light-sensor; camera; display-capture; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr" 
+                    allowfullscreen="true" allowpaymentrequest="true" allowtransparency="true"
+                    sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation allow-downloads allow-presentation"
+                    :srcdoc="this.preview"></iframe>
         </div>
     </div>
 </template>

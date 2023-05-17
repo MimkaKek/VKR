@@ -98,6 +98,9 @@ td, th {
   text-align: center; 
   padding: 8px;
 }
+tr {
+  background-color: rgb(65, 65, 65);
+}
 
 td.btn, div.btn {
     padding: 0px;

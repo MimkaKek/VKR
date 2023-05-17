@@ -1,16 +1,16 @@
 <script>
 import Header from '../components/header/Header.vue'
-import Projects  from '../components/main/Projects.vue'
+import Roles from '../components/main/Roles.vue';
 
 export default {
   components: {
     Header,
-    Projects
+    Roles
   }
 }
 </script>
 
 <template>
   <Header />
-  <Projects />
+  <Roles />
 </template>

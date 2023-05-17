@@ -37,8 +37,6 @@ export default {
 
     },
     mounted() {
-        this.role = this.$store.getters["auth/role"];
-        this.logged = this.$store.getters["auth/status"];
     }
 };
 
@@ -57,27 +55,33 @@ export default {
                 
             </li>
             <li class="panel-divider"></li>
-            <li v-if="this.role < 4 && this.logged && !this.hideMenu" class="panel-item fill">
-                <RouterLink class="panel-btn" to="/projects">{{ tProject }}</RouterLink>
-            </li>
-            <li v-if="this.role < 4 && this.logged && !this.hideMenu" class="panel-item fill">
-                <RouterLink class="panel-btn" style="size: " to="/public">{{ tPubProject }}</RouterLink>
-            </li>
-            <li v-if="this.role < 3 && this.logged && !this.hideMenu" class="panel-divider"></li>
+            <template v-if="this.$store.getters['auth/status']">
+                <li v-if="this.$store.getters['auth/role'] < 4 && !this.hideMenu" class="panel-item fill">
+                    <RouterLink class="panel-btn" to="/projects">{{ tProject }}</RouterLink>
+                </li>
+                <li v-if="this.$store.getters['auth/role'] < 4 && !this.hideMenu" class="panel-item fill">
+                    <RouterLink class="panel-btn" style="size: " to="/public">{{ tPubProject }}</RouterLink>
+                </li>
+                <li v-if="this.$store.getters['auth/role'] < 3 && !this.hideMenu" class="panel-divider"></li>
+            </template>
+            
         </ul>
         <ul class="panel right">
-            <li v-if="this.role < 3 && this.logged && !this.hideMenu" class="panel-item fill">
-                <RouterLink class="panel-btn" to="/templates">{{ tTemplates }}</RouterLink>
-            </li>
-            <li v-if="this.role < 2 && this.logged && !this.hideMenu" class="panel-item fill">
-                <RouterLink class="panel-btn" to="/roles">{{ tRole }}</RouterLink>
-            </li>
-            <li v-if="this.logged" class="panel-divider"></li>
-            <li v-if="this.logged" class="panel-item last">
-                <a class="panel-btn" href="/login">
-                    {{ tLogout }}
-                </a>
-            </li>
+            <template v-if="this.$store.getters['auth/status']">
+                <li v-if="this.$store.getters['auth/role'] < 3 && !this.hideMenu" class="panel-item fill">
+                    <RouterLink class="panel-btn" to="/templates">{{ tTemplates }}</RouterLink>
+                </li>
+                <li v-if="this.$store.getters['auth/role'] < 2 && !this.hideMenu" class="panel-item fill">
+                    <RouterLink class="panel-btn" to="/roles">{{ tRole }}</RouterLink>
+                </li>
+                <li class="panel-divider"></li>
+                <li class="panel-item last">
+                    <a class="panel-btn" href="/login">
+                        {{ tLogout }}
+                    </a>
+                </li>
+            </template>
+            
         </ul>
     </header>
     

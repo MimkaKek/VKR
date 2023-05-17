@@ -16,6 +16,7 @@ export default {
     },
     data() {
         return {
+            newPID: "",
             btnAdd: "Создать",
             projects: {},
             tHead: ["Название", "Владелец", "Тип", "Создан", "Обновлён", "Действия"],
@@ -41,6 +42,32 @@ export default {
             
             this.getProjectsData();
             return;
+        },
+        async getPublic(pid) {
+            const path = 'http://localhost:8000/project/' + pid;
+            
+            var sid = this.$store.getters['auth/sid'];
+            const parameters = {
+                sid: sid
+            };
+
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            return axios.get(path, {params: parameters, headers: headers})
+                        .then((response) => {
+                            if (response.data.status != 0) {
+                                console.error("Get project data failed!");
+                                console.error("Description: " + response.data.description);
+                                return null;
+                            }
+
+                            this.newPID = response.data.data.pid;
+                        })
+                        .catch((error) => {
+                            console.error(error);
+                        });
         },
         getProjectsData() {
             const path = 'http://localhost:8000/projects';
@@ -167,8 +194,14 @@ export default {
                             console.error(error);
                         });
         },
-        openProject(pid) {
-            this.$router.push('/project/edit/' + pid);
+        async openProject(pid) {
+            if (this.type == 'public') {
+                await this.getPublic(pid);
+            }
+            else {
+                this.newPID = pid;
+            }
+            this.$router.push('/project/edit/' + this.newPID);
         },
         async removeProject(pid, getFunc) {
             console.log("RemoveProject Func call with param: " + pid);

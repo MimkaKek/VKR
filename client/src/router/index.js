@@ -26,7 +26,7 @@ const router = createRouter({
     { path: '/project/edit/:pid',     name: 'editor',   component: EditorView       },
     { path: '/project/info/:pid',     name: 'info',     component: InfoView         },
     { path: '/project/settings/:pid', name: 'settings', component: SettingsView     },
-    { path: '/project/create',        name: 'create',   component: CreateView     },
+    { path: '/project/create',        name: 'create',   component: CreateView       },
     { path: '/project/ref/:pid',      name: 'useRefer', component: ReferView        }
   ]
 })

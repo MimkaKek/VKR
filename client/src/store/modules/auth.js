@@ -1,11 +1,11 @@
 // initial state
-
+import cookie from 'vue-cookies'
 import axios from 'axios'
 
 const state = () => ({
-    sid: null,
-    role: 0,
-    status: false
+    sid: cookie.isKey("sid") ? cookie.get("sid") : null,
+    role: cookie.isKey("role") ? cookie.get("role") : null,
+    status: cookie.isKey("status") ? cookie.get("status") : false
 })
   
 // getters
@@ -92,11 +92,19 @@ const mutations = {
         state.status = true;
         state.sid    = uData.sid;
         state.role   = uData.role;
+
+        cookie.set("sid", uData.sid, "7d");
+        cookie.set("role", uData.role, "7d");
+        cookie.set("status", true, "7d");
     },
     logout: (state) => {
         state.status = false;
         state.sid    = null;
-        state.role   = 0;
+        state.role   = null;
+        
+        cookie.remove("sid");
+        cookie.remove("role");
+        cookie.remove("status");
     }
 }
 

@@ -259,6 +259,7 @@ export default {
 }
 
 .filler select {
+    font-size: 20px;
     width: 100%;
     height: 100%;
     background-color: rgb(92, 92, 92);
