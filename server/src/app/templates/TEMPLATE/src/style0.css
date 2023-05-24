@@ -1,0 +1,8 @@
+body {
+	background: #8AE;
+	padding:20;  
+}
+.b1 { border-radius: 8px; background: #F0DADA; width:100px }
+.t1 {border-style:solid;	border-color:green;	border-width:1px; 
+	padding:10px; background-color:#F0F0F0;
+	vertical-align:top; width:800px;}
