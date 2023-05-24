@@ -10,6 +10,10 @@ export default {
       hideMenu: {
         type: Boolean,
         default: false
+      },
+      shareLink: {
+        type: Boolean,
+        default: false
       }
     },
     components: {
@@ -23,6 +27,7 @@ export default {
             tProject: "Проекты",
             tPubProject: "Публичные проекты",
             tTemplates: "Шаблоны",
+            tShare: "Поделиться",
             tRole: "Роли",
             role: 3,
             logged: false
@@ -60,9 +65,13 @@ export default {
                     <RouterLink class="panel-btn" to="/projects">{{ tProject }}</RouterLink>
                 </li>
                 <li v-if="this.$store.getters['auth/role'] < 4 && !this.hideMenu" class="panel-item fill">
-                    <RouterLink class="panel-btn" style="size: " to="/public">{{ tPubProject }}</RouterLink>
+                    <RouterLink class="panel-btn" to="/public">{{ tPubProject }}</RouterLink>
                 </li>
-                <li v-if="this.$store.getters['auth/role'] < 3 && !this.hideMenu" class="panel-divider"></li>
+                <li v-if="this.$store.getters['auth/role'] < 4 && this.shareLink" class="panel-item fill">
+                    <RouterLink class="panel-btn" :to="'/project/share/' + this.$route.params.pid">{{ tShare }}</RouterLink>
+                </li>
+                <li v-if="this.$store.getters['auth/role'] < 3 && !this.hideMenu || this.shareLink" class="panel-divider"></li>
+                <li v-if="this.$store.getters['auth/role'] < 4 && this.shareLink" class="panel-item fill"></li>
             </template>
             
         </ul>

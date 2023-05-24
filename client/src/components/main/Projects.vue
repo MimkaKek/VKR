@@ -203,7 +203,7 @@ export default {
             }
             this.$router.push('/project/edit/' + this.newPID);
         },
-        async removeProject(pid, getFunc) {
+        async removeProject(pid) {
             console.log("RemoveProject Func call with param: " + pid);
             const path = 'http://localhost:8000/project/' + pid;
             

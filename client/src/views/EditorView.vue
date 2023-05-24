@@ -11,6 +11,6 @@ export default {
 </script>
 
 <template>
-  <Header :logoBack="true" :hideMenu="true" />
+  <Header :logoBack="true" :hideMenu="true" :shareLink="true" />
   <Editor />
 </template>
