@@ -20,7 +20,6 @@ class RepositoryManager():
         pass
     
     def RepositoryCopy(self, dstPath: str, srcPath: str) -> bool:
-        logger.info("Call CopyRepository()...")
         logger.info("Copy from {src} to {dst}".format(src=srcPath, dst=dstPath))
         
         if not os.path.exists(srcPath):
@@ -70,7 +69,6 @@ class RepositoryManager():
     # ==================================== USER =======================================
     
     def RepUserCreate(self, username: str) -> bool:
-        logger.info("Call RepUserCreate()...")
         usrPath = os.path.join(ConfigInterface.GL_USERS_PATH, username)
         
         if not os.path.exists(usrPath):
@@ -94,7 +92,6 @@ class RepositoryManager():
         return True
     
     def RepUserRemove(self, username: str) -> bool:
-        logger.info("Call RemoveUserRep()...")
         usrPath = os.path.join(ConfigInterface.GL_USERS_PATH, username)
         
         if not os.path.exists(usrPath):
@@ -136,8 +133,6 @@ class RepositoryManager():
     #======================================= PROJECT ===============================================
     
     def CreateProject(self, username: str, pid: str, meta: ProjectData = ProjectData(), templateID: str = None, copy: bool = False) -> bool:
-        
-        logger.info("Call CreateProject()...")
 
         # Set Links
 
@@ -192,8 +187,6 @@ class RepositoryManager():
         
     def RemoveProject(self, username: str, pid: str) -> bool:
         
-        logger.info("Call RemoveProject()...")
-        
         # Unlink
         usrPath       = os.path.join(ConfigInterface.GL_USERS_PATH, username)
         glProjectPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
@@ -222,8 +215,6 @@ class RepositoryManager():
         return True
     
     def CopyProject(self, username: str, pid: str, newpid: str) -> bool:
-        logger.info("Call CopyProject()...")
-        
         meta = self.GetProjectMeta(pid)
         if meta == None:
             logger.error("Failed get metadata for {pid} of user {user}".format(pid=pid, user=username))
@@ -235,6 +226,7 @@ class RepositoryManager():
         meta.isPublic       = False
         meta.created        = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
         meta.lastUpdated    = datetime.now().strftime('%Y.%m.%d %H:%M:%S')
+        meta.isCopy         = True
         
         copy = True
 
@@ -245,8 +237,6 @@ class RepositoryManager():
         return True
     
     def GetProjects(self, isAll: bool = False) -> dict[str, dict]:
-        logger.info("Call ProjectsGetAll()...")
-
         result = {}
         pPath  = ConfigInterface.GL_PROJECT_PATH if isAll else ConfigInterface.GL_PUBLIC_PATH
 
@@ -262,8 +252,6 @@ class RepositoryManager():
         return result
     
     def GetUserProjects(self, username: str, isTemplate: bool = False) -> dict[str, dict]:
-        logger.info("Call GetUserProjects()...")
-
         result = {}
         repo   = "t_repo" if isTemplate else "p_repo"
         sPath  = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS[repo])
@@ -281,7 +269,6 @@ class RepositoryManager():
         return result
 
     def IsUserProject(self, username: str, pid: str) -> bool:
-        logger.info("Call IsUserProject()...")
         for _, repo in ConfigInterface.USER_REPOS.items():
             path     = os.path.join(ConfigInterface.GL_USERS_PATH, username, repo)
             projects = os.listdir(path)
@@ -304,12 +291,10 @@ class RepositoryManager():
     #======================================= FILES ===============================================
 
     def GetProjectFiles(self, pid: str) -> list[str]:
-        logger.info("Call GetProjectFiles()...")
         srcPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"])
         return os.listdir(srcPath)
     
     def GetProjectFile(self, pid: str, filename: str) -> str | None:
-        logger.info("Call GetProjectFile()...")
         result = None
         filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
         
@@ -321,8 +306,6 @@ class RepositoryManager():
         return result
     
     def SetProjectFile(self, pid: str, filename: str, data: dict[str, str]) -> bool:
-        logger.info("Call SetProjectFile()...")
-
         filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
 
         content = data.get("content", None)
@@ -347,7 +330,6 @@ class RepositoryManager():
         return True
     
     def CreateProjectFile(self, pid: str, filename: str) -> bool:
-        logger.info("Call CreateProjectFile()...")
         filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
         if not os.path.exists(filePath):
             meta = self.GetProjectMeta(pid)
@@ -363,7 +345,6 @@ class RepositoryManager():
         return True
     
     def RemoveProjectFile(self, pid: str, filename: str) -> bool:
-        logger.info("Call RemoveProjectFile()...")
         filePath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"], filename)
         if os.path.exists(filePath):
             meta = self.GetProjectMeta(pid)
@@ -382,6 +363,7 @@ class RepositoryManager():
         projectPath      = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid)
         publicPath       = os.path.join(ConfigInterface.GL_PUBLIC_PATH, pid)
         templatePath     = os.path.join(ConfigInterface.GL_TEMPLATES_PATH, pid)
+        loc_projectPath  = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS["p_repo"], pid)
         loc_templatePath = os.path.join(ConfigInterface.GL_USERS_PATH, username, ConfigInterface.USER_REPOS["t_repo"], pid)
 
         try:
@@ -395,9 +377,11 @@ class RepositoryManager():
                 if metaOld.isTemplate:
                     os.unlink(templatePath)
                     os.unlink(loc_templatePath)
+                    os.symlink(projectPath, loc_projectPath)
                 else:
                     os.symlink(projectPath, loc_templatePath)
                     os.symlink(projectPath, templatePath)
+                    os.unlink(loc_projectPath)
         except Exception as e:
             logger.error("Update links failed for project {pid}".format(pid=pid))
             logger.exception(e)
@@ -408,7 +392,6 @@ class RepositoryManager():
     #======================================= METADATA ===============================================
 
     def SetProjectMeta(self, pid: str, sData: ProjectData) -> bool:
-        logger.info("Call SetProjectMeta()...")
         
         sDataPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_DATA)
         with open(sDataPath, "w") as file:
@@ -418,7 +401,6 @@ class RepositoryManager():
         return True
     
     def GetProjectMeta(self, pid: str) -> ProjectData | None:
-        logger.info("Call GetProjectMeta()...")
         
         result   = None
         dataPath = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_DATA)
@@ -433,8 +415,6 @@ class RepositoryManager():
     #======================================= PREVIEW ===============================================
 
     def ProjectGetPage(self, pid: str, filename: str) -> str:
-        
-        logger.info("Call ProjectGetPage()...")
         repPath  = os.path.join(ConfigInterface.GL_PROJECT_PATH, pid, ConfigInterface.PROJECT_REPOS["src"])
         tempPath = os.path.join(repPath, filename)
 
@@ -474,8 +454,6 @@ class RepositoryManager():
     #======================================= SHARE ===============================================
 
     def UseLinkProject(self, username: str, pid: str) -> bool:
-        
-        logger.info("Call UseLinkProject()...")
         
         meta = self.GetProjectMeta(pid)
         if meta == None:

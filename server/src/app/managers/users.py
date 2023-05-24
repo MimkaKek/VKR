@@ -41,8 +41,6 @@ class UserManager():
 
     def AddUser(self, username: str, email: str, password: str) -> Callback:
         
-        logger.info("Call AddUser()...")
-        
         if self._IsEmailExist(email):
             logger.error("Email already exists...")
             return Callback(status=1, description="Email already exists")
@@ -61,19 +59,16 @@ class UserManager():
         db.session.add(u)
         db.session.commit()
         
-        logger.info("User registered...")
+        logger.info("User {username} registered...".format(username=username))
         return Callback(data={"sid": sid, "role": 3})
 
     def RemoveUser(self, user: UserModel) -> Callback:
-        logger.debug("Call RemoveUser()...")
         db.session.delete(user)
         db.session.commit()
         logger.info("User {user} removed...".format(user=user.username))
         return Callback()
 
     def ListUsers(self) -> Callback:
-        
-        logger.info("Call ListUsers()...")
         manager = RepositoryManager()
         usersList = manager.RepUsersList()
         usersDict = dict()
@@ -91,14 +86,10 @@ class UserManager():
         return Callback(status=1, description="Wrong password!")
     
     def GetUser(self, username: str = None, email: str = None, sid: str = None) -> Callback:
-
-        logger.info("Call GetUser()...")
-
         if username is not None:
             user = UserModel.query.filter_by(username=username).first()
             if user is not None:
                 return Callback(data=user)
-
         if email is not None:
             user = UserModel.query.filter_by(email=email).first()
             if user is not None:
@@ -108,8 +99,6 @@ class UserManager():
             user = UserModel.query.filter_by(sid=sid).first()
             if user is not None:
                 return Callback(data=user)
-        
-        logger.warn("User doesn't exists!")
         return Callback(status=1, description="User doesn't exists!")
             
     def CreateSID(self, user: UserModel) -> Callback:
@@ -123,8 +112,6 @@ class UserManager():
         return Callback()
 
     def SetRole(self, user: UserModel, newRole: str) -> Callback:
-
-        logger.info("Call SetRole()...")
         try:
             user.role = newRole
             db.session.commit()
@@ -132,18 +119,13 @@ class UserManager():
             logger.error("Error while update user role!")
             logger.exception(e)
             return Callback(status=1, description="Setting role failed!")
-
-        logger.info("End SetRole()...")
         return Callback()
     
     def GetRole(self, user: UserModel) -> Callback:
-        logger.info("Call GetRole()...")
         try:
             callback = Callback(data=user.role)
         except Exception as e:
             logger.error("Get role failed!")
             logger.exception(e)
             return Callback(status=1, description="Get role failed!")
-
-        logger.info("End GetRole()...")
         return callback

@@ -26,7 +26,6 @@ class ProjectManager():
 
 
     def CreateProject(self, username: str, meta: ProjectData = ProjectData(), template: str = None) -> Callback:
-        logger.info("Call CreateProject()...")
         
         newPID   = uuid.uuid4().hex
         link     = uuid.uuid4().hex
@@ -49,7 +48,6 @@ class ProjectManager():
         return self.GetProject(username, newPID)
 
     def RemoveProject(self, username: str, pid: str) -> Callback:
-        logger.info("Call RemoveProject()...")
 
         manager = RepositoryManager()
         
@@ -59,15 +57,15 @@ class ProjectManager():
         
         meta = manager.GetProjectMeta(pid)
 
-        if meta.owner != username:
+        if (meta.owner != username) and not meta.isCopy:
             logger.warn("User {name} tried to remove project {pid} of user {owner}! Rejected!".format(name=username, pid=pid, owner=meta.owner))
             return Callback(status=2, description="The project doesn't belong to you!")
 
         if not manager.RemoveProject(username, pid):
             logger.error("Project with pid {pid} remove failed!".format(pid=pid))
             return Callback(status=3, description="Project remove failed!")
-        
-        s = ProjectModel.query.filter_by(pid=pid).one()
+
+        s = ProjectModel.query.filter_by(pid=pid).first()
         if s == None:
             logger.error("Session {pid} doesn't exists".format(pid=pid))
             return False
@@ -79,7 +77,6 @@ class ProjectManager():
         return Callback()
     
     def GetUserProjects(self, username: str, isTemplate: bool = False) -> Callback:
-        logger.info("Call GetUserProjects()...")
         
         manager = RepositoryManager()
         pDict = manager.GetUserProjects(username, isTemplate)
@@ -98,7 +95,6 @@ class ProjectManager():
         return Callback(data=pDict)
     
     def GetAllProjects(self, isAll: bool = False) -> Callback:
-        logger.info("Call GetUserProjects()...")
         
         manager = RepositoryManager()
         pDict = manager.GetProjects(isAll)
@@ -118,7 +114,6 @@ class ProjectManager():
         return Callback(data=pDict)
 
     def GetProject(self, username: str, pid: str) -> Callback:
-        logger.info("Call GetProject()...")
         
         manager = RepositoryManager()
         meta    = manager.GetProjectMeta(pid)
@@ -132,10 +127,15 @@ class ProjectManager():
                 return Callback(status=2, description="Project doesn't exists!")
             
             newPID = uuid.uuid4().hex
+            link   = uuid.uuid4().hex
+            
             if not manager.CopyProject(username, pid, newPID):
                 logger.error("Project {pid} failed to copy!".format(pid=pid))
                 return Callback(status=3, description="Failed to create copy!")
             
+            s = ProjectModel(newPID, link)
+            db.session.add(s)
+            db.session.commit()
             pid = newPID
 
         projectFiles = manager.GetProjectFiles(pid)
@@ -160,7 +160,6 @@ class ProjectManager():
         return Callback(data=templates)
 
     def GetFileProject(self, username: str, pid: str, filename: str) -> Callback:
-        logger.info("Call GetFileProject()...")
         
         manager = RepositoryManager()
         
@@ -177,7 +176,6 @@ class ProjectManager():
         return Callback(data=fileData)
     
     def SetFileProject(self, username: str, pid: str, filename: str, data: str) -> Callback:
-        logger.info("Call ProjectSetFile()...")
         
         manager = RepositoryManager()
         if not manager.IsUserProject(username, pid):
@@ -191,7 +189,6 @@ class ProjectManager():
         return Callback()
     
     def RemoveProjectFile(self, username: str, pid: str, filename: str) -> Callback:
-        logger.info("Call RemoveProjectFile()...")
         
         manager = RepositoryManager()
         
@@ -206,7 +203,6 @@ class ProjectManager():
         return Callback()
     
     def CreateProjectFile(self, username: str, pid: str, filename: str) -> Callback:
-        logger.info("Call CreateProjectFile()...")
         
         manager = RepositoryManager()
         
@@ -221,8 +217,6 @@ class ProjectManager():
         return Callback(data="")
     
     def GeneratePage(self, username: str, pid: str, filename: str) -> Callback:
-        
-        logger.info("Call GeneratePage()...")
         
         manager = RepositoryManager()
         
@@ -239,8 +233,6 @@ class ProjectManager():
         return Callback(data=page)
     
     def SetProjectMeta(self, username: str, pid: str, data: dict) -> Callback:
-        
-        logger.info("Call ProjectSetMeta()...")
         
         manager = RepositoryManager()
         
@@ -266,8 +258,6 @@ class ProjectManager():
     
     def CreateLinkProject(self, username: str, pid: str) -> Callback:
         
-        logger.info("Call CreateLinkProject()...")
-        
         manager = RepositoryManager()
         
         if not manager.IsUserProject(username, pid):
@@ -292,8 +282,6 @@ class ProjectManager():
     
     def GetLinkProject(self, username: str, pid: str) -> Callback:
         
-        logger.info("Call GetLinkProject()...")
-        
         manager = RepositoryManager()
         
         if not manager.IsUserProject(username, pid):
@@ -316,8 +304,6 @@ class ProjectManager():
 
     def UseLinkProject(self, username: str, link: str) -> Callback:
         
-        logger.info("Call ProjectUseLink()...")
-        
         manager = RepositoryManager()
         
         project = ProjectModel.query.filter_by(reflink=link).first()
@@ -335,8 +321,6 @@ class ProjectManager():
         return Callback()
     
     def CopyProject(self, username: str, pid: str, isPublic: bool = False) -> Callback:
-        
-        logger.info("Call CopyProject()...")
         
         manager = RepositoryManager()
         
