@@ -42,7 +42,6 @@ export default {
 
             if (filename.includes(".")) {
                 let lang = filename.split(".")[1];
-                console.log("Language: " + lang);
                 this.extensions = [this.languages[lang](), oneDark];
             }
             else {
@@ -153,8 +152,6 @@ export default {
                         }
 
                         this.meta = response.data.data;
-                        
-                        console.log(this.meta);
                     })
                     .catch((error) => {
                         console.error(error);

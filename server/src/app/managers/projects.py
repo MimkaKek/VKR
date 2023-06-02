@@ -232,6 +232,18 @@ class ProjectManager():
         
         return Callback(data=page)
     
+    def GeneratePageAnon(self, pid: str, filename: str) -> Callback:
+        
+        manager = RepositoryManager()
+        
+        page = manager.ProjectGetPage(pid, filename)
+        
+        if page == None:
+            logger.error("Getting page from {pid} failed".format(pid=pid))
+            return Callback(status=2, description="Getting page failed!")
+        
+        return Callback(data=page)
+    
     def SetProjectMeta(self, username: str, pid: str, data: dict) -> Callback:
         
         manager = RepositoryManager()

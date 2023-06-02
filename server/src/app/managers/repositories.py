@@ -440,6 +440,8 @@ class RepositoryManager():
 
             for style in parsedHtml.find_all('link', {"rel":"stylesheet"}):
                 src = ""
+                if "http" in style["href"]:
+                    continue
                 stylePath = os.path.join(repPath, style["href"])
                 with open(stylePath, "r") as file:
                     src = file.read()

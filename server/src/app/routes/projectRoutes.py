@@ -294,18 +294,10 @@ def projectFileCreate(hash, filename):
 
 @projectBlueprint.route('/project/<hash>/<filename>/preview', methods=['GET'])
 @cross_origin()
-@loginRequired(cfg.ROLES.STUDENT)
 def projectFilePreview(hash, filename):
     try:
-        sid = request.args.get('sid', None)
-
-        uManager = UserManager()
         pManager = ProjectManager()
-
-        user     = uManager.GetUser(sid=sid).data
-        username = user.username
-        
-        callback = pManager.GeneratePage(username, hash, filename)
+        callback = pManager.GeneratePageAnon(hash, filename)
         return callback.data
     except Exception as e:
         logger.error("Caught exception at {endpoint}".format(endpoint=request.endpoint))
@@ -367,6 +359,17 @@ def useShareLink(hash):
         
         callback = pManager.UseLinkProject(username, hash)
         return jsonify(callback.dict())
+    except Exception as e:
+        logger.error("Caught exception at {endpoint}".format(endpoint=request.endpoint))
+        logger.exception(e)
+        return jsonify(Callback(100, "Unexpected error").dict())
+
+@projectBlueprint.route('/test_prev', methods=['GET'])
+def test_prev():
+    try:
+        pManager = ProjectManager()
+        callback = pManager.GeneratePage("admin", "829351a9fef841ce801fe2f026bec878", "main.html")
+        return callback.data
     except Exception as e:
         logger.error("Caught exception at {endpoint}".format(endpoint=request.endpoint))
         logger.exception(e)
